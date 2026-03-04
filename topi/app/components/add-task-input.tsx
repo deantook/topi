@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import { Calendar as CalendarIcon, Plus } from "lucide-react";
+import { Calendar as CalendarIcon, Flag, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,9 +9,15 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Calendar } from "@/components/ui/calendar";
 import type { TaskFilter, TaskPriority } from "@/hooks/use-tasks";
-import { PRIORITY_LABEL } from "@/lib/task-constants";
+import { PRIORITY_LABEL, PRIORITY_FLAG_CLASS } from "@/lib/task-constants";
 import { cn } from "@/lib/utils";
 
 const HH_MM_REGEX = /^([01]?\d|2[0-3]):([0-5]\d)$/;
@@ -205,9 +211,69 @@ export function AddTaskInput({ filter, onSubmit }: AddTaskInputProps) {
           </Popover>
         )}
         {showRightControls && (
-          <span className="text-xs text-muted-foreground">
-            {PRIORITY_LABEL[addPriority]}
-          </span>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                aria-label="优先级"
+                className={cn(
+                  "shrink-0",
+                  PRIORITY_FLAG_CLASS[addPriority]
+                )}
+              >
+                <Flag
+                  className={cn(
+                    "size-4 transition-transform",
+                    addPriority === "none" && "opacity-50"
+                  )}
+                  fill={addPriority === "none" ? "none" : "currentColor"}
+                  strokeWidth={addPriority === "none" ? 1.5 : 2}
+                />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              data-add-task-control
+              align="end"
+              className="w-40"
+            >
+              <DropdownMenuLabel className="px-0 text-xs text-muted-foreground">
+                优先级
+              </DropdownMenuLabel>
+              <div className="mt-1.5 flex gap-1 px-2">
+                {(["high", "medium", "low", "none"] as const).map((p) => {
+                  const isSelected = addPriority === p;
+                  return (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setAddPriority(p)}
+                      className={cn(
+                        "rounded p-1 transition-all hover:bg-accent",
+                        isSelected && "!bg-neutral-200 dark:!bg-neutral-700",
+                        p === "none" && isSelected
+                          ? "text-neutral-500 dark:text-neutral-400"
+                          : PRIORITY_FLAG_CLASS[p]
+                      )}
+                      title={PRIORITY_LABEL[p]}
+                      aria-label={PRIORITY_LABEL[p]}
+                      aria-pressed={isSelected}
+                    >
+                      <Flag
+                        className={cn(
+                          "size-4 transition-transform",
+                          p === "none" && !isSelected && "opacity-50",
+                          isSelected && "scale-110"
+                        )}
+                        fill={p === "none" ? "none" : "currentColor"}
+                        strokeWidth={isSelected ? 2 : 1.5}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
       </div>
     </form>
