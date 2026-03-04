@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Sun, ArrowRight, CalendarDays, CalendarClock } from "lucide-react";
+import { Sun, ArrowRight, CalendarDays, CalendarClock, Clock } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,6 +9,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Field } from "@/components/ui/field";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import { isValidTime } from "@/lib/date-utils";
 
 function toDateString(d: Date): string {
@@ -60,7 +66,7 @@ export function DateTimePicker({
   };
 
   return (
-    <div className="flex flex-col gap-2 p-2">
+    <div className="flex flex-col gap-2 p-2 bg-white dark:bg-neutral-900">
       <div className="flex items-center gap-1.5">
         <Button
           type="button"
@@ -97,9 +103,10 @@ export function DateTimePicker({
         </Button>
       </div>
 
-      <div role="group" aria-label="选择日期">
+      <div role="group" aria-label="选择日期" className="bg-white dark:bg-neutral-900">
         <Calendar
           mode="single"
+          className="!bg-white dark:!bg-neutral-900"
           selected={datePart ? new Date(datePart + "T12:00:00") : undefined}
           onSelect={(date: Date | undefined) => {
           if (!date) return;
@@ -113,42 +120,42 @@ export function DateTimePicker({
         />
       </div>
 
-      <div className="flex items-center gap-2 border-t pt-2">
-        <input
-          type="time"
-          aria-label="时间"
-          value={timePart}
-          onChange={(e) => {
-            const v = e.target.value;
-            const useDate = datePart ?? fallbackDate();
-            onChange(`${useDate} ${v}:00`);
-          }}
-          onFocus={() => {
-            if (!value) {
-              onChange(`${fallbackDate()} 00:00:00`);
-            }
-          }}
-          className="h-8 w-20 min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm dark:bg-input/30"
-        />
-        <div className="flex-1" />
+      <div className="flex items-end gap-2 border-t pt-2">
+        <Field className="min-w-0 flex-1">
+          <InputGroup>
+            <InputGroupInput
+              id="datetime-time"
+              type="time"
+              step="60"
+              value={timePart}
+              onChange={(e) => {
+                const v = e.target.value;
+                const useDate = datePart ?? fallbackDate();
+                onChange(`${useDate} ${v}:00`);
+              }}
+              onFocus={() => {
+                if (!value) {
+                  onChange(`${fallbackDate()} 00:00:00`);
+                }
+              }}
+              className="appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
+            />
+            <InputGroupAddon>
+              <Clock className="size-4 text-muted-foreground" />
+            </InputGroupAddon>
+          </InputGroup>
+        </Field>
         <Button
           type="button"
-          variant="ghost"
-          size="xs"
+          variant="outline"
+          size="sm"
+          className="h-9 shrink-0"
           onClick={() => {
             onChange(null);
             onClear?.();
           }}
         >
           清除
-        </Button>
-        <Button
-          type="button"
-          variant="default"
-          size="xs"
-          onClick={() => onConfirm?.()}
-        >
-          确定
         </Button>
       </div>
     </div>
@@ -189,7 +196,12 @@ export function DateTimePickerPopover({
       <PopoverTrigger asChild>
         {trigger ?? defaultTrigger}
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-auto p-0" {...contentProps}>
+      <PopoverContent
+        align="end"
+        avoidCollisions={false}
+        className="w-auto p-0 !bg-white dark:!bg-neutral-900"
+        {...contentProps}
+      >
         <DateTimePicker
           value={value}
           onChange={onChange}

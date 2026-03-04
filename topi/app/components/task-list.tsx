@@ -232,16 +232,13 @@ function SortableTaskRow({
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="shrink-0 h-auto rounded px-1.5 py-0.5 text-xs text-muted-foreground bg-muted/60 hover:bg-muted/80"
-              >
-                {task.dueDate ? (
-                  formatDueDate(task.dueDate)
-                ) : (
-                  <>
-                    <Calendar className="size-3.5 mr-0.5 shrink-0" />
-                    设置截止日期
-                  </>
+                className={cn(
+                  "shrink-0 h-auto rounded px-1.5 py-0.5 text-xs text-muted-foreground bg-muted/60 hover:bg-muted/80",
+                  !task.dueDate && "invisible min-w-[5rem]"
                 )}
+                aria-label="设置截止日期"
+              >
+                {task.dueDate ? formatDueDate(task.dueDate) : "\u200B"}
               </Button>
             }
           />
@@ -488,23 +485,20 @@ export function TaskList({
               onChange={(v) => updateTask(task.id, { dueDate: v })}
               open={editingDueDateId === task.id}
               onOpenChange={(open) => setEditingDueDateId(open ? task.id : null)}
-              trigger={
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="shrink-0 h-auto rounded px-1.5 py-0.5 text-xs text-muted-foreground bg-muted/60 hover:bg-muted/80"
-                >
-                  {task.dueDate ? (
-                    formatDueDate(task.dueDate)
-                  ) : (
-                    <>
-                      <Calendar className="size-3.5 mr-0.5 shrink-0" />
-                      设置截止日期
-                    </>
-                  )}
-                </Button>
-              }
+            trigger={
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  "shrink-0 h-auto rounded px-1.5 py-0.5 text-xs text-muted-foreground bg-muted/60 hover:bg-muted/80",
+                  !task.dueDate && "invisible min-w-[5rem]"
+                )}
+                aria-label="设置截止日期"
+              >
+                {task.dueDate ? formatDueDate(task.dueDate) : "\u200B"}
+              </Button>
+            }
             />
           </>
         )}
