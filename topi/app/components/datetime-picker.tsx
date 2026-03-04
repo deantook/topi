@@ -11,7 +11,7 @@ function isValidTime(value: string): boolean {
 }
 
 export function formatDueDateForDisplay(dateStr: string): string {
-  if (!dateStr) return "";
+  if (!dateStr || dateStr.length < 10) return "";
   const [y, m, d] = dateStr.slice(0, 10).split("-");
   const timePart = dateStr.length >= 19 ? dateStr.slice(11, 16) : null;
   return timePart
@@ -105,7 +105,7 @@ export function DateTimePicker({
 
       <Calendar
         mode="single"
-        selected={datePart ? new Date(datePart) : undefined}
+        selected={datePart ? new Date(datePart + "T12:00:00") : undefined}
         onSelect={(date: Date | undefined) => {
           if (!date) return;
           const ds = toDateString(date);
@@ -120,6 +120,7 @@ export function DateTimePicker({
       <div className="flex items-center gap-2 border-t pt-2">
         <input
           type="time"
+          aria-label="时间"
           value={timePart}
           onChange={(e) => {
             const v = e.target.value;
