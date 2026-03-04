@@ -76,6 +76,7 @@ func provideRouter(
 
 		auth := v1.Group("")
 		auth.Use(middleware.Auth(jwtHelper))
+		auth.Use(middleware.Timezone())
 		{
 			auth.GET("/tasks", taskH.List)
 			auth.POST("/tasks", taskH.Create)
