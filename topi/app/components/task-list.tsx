@@ -45,31 +45,13 @@ import {
 import type { Task, TaskFilter, TaskPriority } from "@/hooks/use-tasks";
 import { useTasks } from "@/hooks/use-tasks";
 import { useCustomLists } from "@/hooks/use-custom-lists";
+import {
+  PRIORITY_LABEL,
+  PRIORITY_FLAG_CLASS,
+  PRIORITY_CHECKBOX_CLASS,
+} from "@/lib/task-constants";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-
-const PRIORITY_LABEL: Record<TaskPriority, string> = {
-  high: "高",
-  medium: "中",
-  low: "低",
-  none: "无",
-};
-
-const PRIORITY_FLAG_CLASS: Record<TaskPriority, string> = {
-  high: "text-red-500",
-  medium: "text-blue-500",
-  low: "text-muted-foreground",
-  none: "text-muted-foreground/50",
-};
-
-const PRIORITY_CHECKBOX_CLASS: Record<TaskPriority, string> = {
-  high:
-    "border-red-500 data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500",
-  medium:
-    "border-blue-500 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500",
-  low: "border-muted-foreground data-[state=checked]:bg-muted-foreground data-[state=checked]:border-muted-foreground",
-  none: "",
-};
 
 function formatDueDate(dateStr: string | null, refDate = new Date()): string | null {
   if (!dateStr) return null;
