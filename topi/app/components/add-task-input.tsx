@@ -163,16 +163,13 @@ export function AddTaskInput({ filter, onSubmit }: AddTaskInputProps) {
                     }
                     onChange={(e) => {
                       const v = e.target.value;
+                      const datePart = addDueDate ? addDueDate.slice(0, 10) : null;
                       if (v === "") {
-                        const datePart = addDueDate.slice(0, 10);
                         if (datePart) setAddDueDate(`${datePart} 00:00:00`);
                         return;
                       }
-                      if (!isValidTime(v)) return;
-                      const datePart = addDueDate ? addDueDate.slice(0, 10) : null;
-                      if (datePart) {
-                        setAddDueDate(`${datePart} ${v}:00`);
-                      }
+                      if (!isValidTime(v) || !datePart) return;
+                      setAddDueDate(`${datePart} ${v}:00`);
                     }}
                     className="h-8 w-20"
                   />
