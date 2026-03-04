@@ -7,22 +7,26 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuItem,
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
 import { Input } from "@/components/ui/input";
 import { useCustomLists } from "@/hooks/use-custom-lists";
+import { cn } from "@/lib/utils";
 
 function CustomListItem({
   id,
   name,
   isActive,
+  count,
   onRename,
   onDelete,
 }: {
   id: string;
   name: string;
   isActive: boolean;
+  count: number;
   onRename: (name: string) => void;
   onDelete: () => void;
 }) {
@@ -84,7 +88,13 @@ function CustomListItem({
           <span className="min-w-0 flex-1 truncate">{name}</span>
         </Link>
       </SidebarMenuButton>
-      <div className="absolute right-1 top-1/2 flex -translate-y-1/2 gap-0.5 opacity-0 group-hover/menu-item:opacity-100 transition-opacity [@media(hover:none)]:opacity-100">
+      {count > 0 && <SidebarMenuBadge>{count}</SidebarMenuBadge>}
+      <div
+        className={cn(
+          "absolute top-1/2 flex -translate-y-1/2 gap-0.5 opacity-0 group-hover/menu-item:opacity-100 transition-opacity [@media(hover:none)]:opacity-100",
+          count > 0 ? "right-7" : "right-1"
+        )}
+      >
         <button
           type="button"
           onClick={(e) => {
@@ -112,7 +122,11 @@ function CustomListItem({
   );
 }
 
-export function CustomListsSidebar() {
+export function CustomListsSidebar({
+  listCounts = {},
+}: {
+  listCounts?: Record<string, number>;
+}) {
   const { lists, addList, updateList, deleteList } = useCustomLists();
   const location = useLocation();
   const [isAdding, setIsAdding] = useState(false);
@@ -160,6 +174,7 @@ export function CustomListsSidebar() {
               id={list.id}
               name={list.name}
               isActive={location.pathname === `/list/${list.id}`}
+              count={listCounts[list.id] ?? 0}
               onRename={(name) => updateList(list.id, name)}
               onDelete={() => deleteList(list.id)}
             />

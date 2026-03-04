@@ -30,6 +30,8 @@ interface ApiTask {
   created_at: string;
 }
 
+const TASKS_CHANGED_EVENT = "topi:tasks-changed";
+
 const PRIORITY_ORDER: Record<TaskPriority, number> = {
   high: 0,
   medium: 1,
@@ -219,6 +221,7 @@ export function useTasks(filter: TaskFilter) {
         if (res?.data) {
           const newTask = mapTask(res.data);
           setTasks((prev) => [...prev, newTask]);
+          window.dispatchEvent(new CustomEvent(TASKS_CHANGED_EVENT));
           return newTask.id;
         }
         return "";
@@ -244,6 +247,7 @@ export function useTasks(filter: TaskFilter) {
             : t
         )
       );
+      window.dispatchEvent(new CustomEvent(TASKS_CHANGED_EVENT));
     } catch (e) {
       console.error("Failed to toggle task:", e);
       fetchTasks();
@@ -277,6 +281,7 @@ export function useTasks(filter: TaskFilter) {
         setTasks((prev) =>
           prev.map((t) => (t.id === id ? { ...t, ...updates } : t))
         );
+        window.dispatchEvent(new CustomEvent(TASKS_CHANGED_EVENT));
       } catch (e) {
         console.error("Failed to update task:", e);
         fetchTasks();
@@ -294,6 +299,7 @@ export function useTasks(filter: TaskFilter) {
           await apiClient.post(`/tasks/${id}/trash`);
         }
         setTasks((prev) => prev.filter((t) => t.id !== id));
+        window.dispatchEvent(new CustomEvent(TASKS_CHANGED_EVENT));
       } catch (e) {
         console.error("Failed to delete task:", e);
         fetchTasks();
@@ -310,6 +316,7 @@ export function useTasks(filter: TaskFilter) {
           t.id === id ? { ...t, status: "abandoned" as const } : t
         )
       );
+      window.dispatchEvent(new CustomEvent(TASKS_CHANGED_EVENT));
     } catch (e) {
       console.error("Failed to abandon task:", e);
       fetchTasks();
@@ -326,6 +333,7 @@ export function useTasks(filter: TaskFilter) {
             : t
         )
       );
+      window.dispatchEvent(new CustomEvent(TASKS_CHANGED_EVENT));
     } catch (e) {
       console.error("Failed to restore task:", e);
       fetchTasks();
@@ -347,6 +355,7 @@ export function useTasks(filter: TaskFilter) {
             return i >= 0 ? { ...t, order: i } : t;
           })
         );
+        window.dispatchEvent(new CustomEvent(TASKS_CHANGED_EVENT));
       } catch (e) {
         console.error("Failed to reorder tasks:", e);
         fetchTasks();
@@ -367,4 +376,82 @@ export function useTasks(filter: TaskFilter) {
     reorderTasks,
     isLoading,
   };
+}
+
+export interface TaskCounts {
+  all: number;
+  today: number;
+  tomorrow: number;
+  recentSeven: number;
+  inbox: number;
+  completed: number;
+  abandoned: number;
+  trash: number;
+  list: Record<string, number>;
+}
+
+export function useTaskCounts(): TaskCounts {
+  const [counts, setCounts] = useState<TaskCounts>({
+    all: 0,
+    today: 0,
+    tomorrow: 0,
+    recentSeven: 0,
+    inbox: 0,
+    completed: 0,
+    abandoned: 0,
+    trash: 0,
+    list: {},
+  });
+
+  const fetchCounts = useCallback(() => {
+    const refDate = new Date();
+    Promise.all([
+      apiClient.get("/tasks") as Promise<{ data: ApiTask[] }>,
+      apiClient.get("/tasks?filter=completed") as Promise<{ data: ApiTask[] }>,
+      apiClient.get("/tasks?filter=abandoned") as Promise<{ data: ApiTask[] }>,
+      apiClient.get("/tasks?filter=trash") as Promise<{ data: ApiTask[] }>,
+    ])
+      .then(([allRes, completedRes, abandonedRes, trashRes]) => {
+        const allTasks = (allRes.data ?? []).map(mapTask);
+        const completedTasks = (completedRes.data ?? []).map(mapTask);
+        const abandonedTasks = (abandonedRes.data ?? []).map(mapTask);
+        const trashTasks = (trashRes.data ?? []).map(mapTask);
+
+        const listCounts: Record<string, number> = {};
+        for (const t of allTasks) {
+          if (t.listId) {
+            listCounts[t.listId] = (listCounts[t.listId] ?? 0) + 1;
+          }
+        }
+
+        setCounts({
+          all: allTasks.length,
+          today: filterTasks(allTasks, "today", refDate).length,
+          tomorrow: filterTasks(allTasks, "tomorrow", refDate).length,
+          recentSeven: filterTasks(allTasks, "recent-seven", refDate).length,
+          inbox: filterTasks(allTasks, "inbox", refDate).length,
+          completed: completedTasks.length,
+          abandoned: abandonedTasks.length,
+          trash: trashTasks.length,
+          list: listCounts,
+        });
+      })
+      .catch((e) => {
+        console.error("Failed to fetch task counts:", e);
+      });
+  }, []);
+
+  useEffect(() => {
+    fetchCounts();
+    const onFocus = () => fetchCounts();
+    const onTasksChanged = () => fetchCounts();
+    window.addEventListener("focus", onFocus);
+    window.addEventListener(TASKS_CHANGED_EVENT, onTasksChanged);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener(TASKS_CHANGED_EVENT, onTasksChanged);
+    };
+  }, [fetchCounts]);
+
+  return counts;
 }
