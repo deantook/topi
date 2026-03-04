@@ -213,7 +213,7 @@ export function useTasks(filter: TaskFilter) {
       const body: Record<string, string | null> = {};
       if (updates.title !== undefined) body.title = updates.title;
       if (updates.listId !== undefined) body.listId = updates.listId;
-      if (updates.dueDate !== undefined) body.dueDate = updates.dueDate;
+      if (updates.dueDate !== undefined) body.dueDate = updates.dueDate ?? "";
       if (Object.keys(body).length === 0) return;
       try {
         await apiClient.patch(`/tasks/${id}`, body);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Plus, GripVertical, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Plus, GripVertical, MoreHorizontal, Pencil, Trash2, Calendar } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,18 @@ import type { Task, TaskFilter } from "@/hooks/use-tasks";
 import { useTasks } from "@/hooks/use-tasks";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+
+function formatDueDate(dateStr: string | null, refDate = new Date()): string | null {
+  if (!dateStr) return null;
+  const today = refDate.toISOString().slice(0, 10);
+  const tomorrow = new Date(refDate);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+  if (dateStr === today) return "今天";
+  if (dateStr === tomorrowStr) return "明天";
+  const [y, m, d] = dateStr.split("-");
+  return `${parseInt(m, 10)}月${parseInt(d, 10)}日`;
+}
 
 export interface TaskListProps {
   title: string;
@@ -40,6 +52,8 @@ export function TaskList({
   const [input, setInput] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
+  const [editingDueDateId, setEditingDueDateId] = useState<string | null>(null);
+  const [addDueDate, setAddDueDate] = useState<string>("");
   const [hoverId, setHoverId] = useState<string | null>(null);
 
   const handleSubmit = useCallback(
@@ -54,11 +68,13 @@ export function TaskList({
         const d = new Date();
         if (filter === "tomorrow") d.setDate(d.getDate() + 1);
         options = { dueDate: d.toISOString().slice(0, 10) };
+      } else if (addDueDate) {
+        options = { dueDate: addDueDate };
       }
       addTask(trimmed, options);
       setInput("");
     },
-    [input, filter, addTask]
+    [input, filter, addTask, addDueDate]
   );
 
   const handleToggle = useCallback(
@@ -159,6 +175,25 @@ export function TaskList({
             {task.title}
           </span>
         )}
+        {mode === "default" && task.dueDate && !editingDueDateId && (
+          <span className="shrink-0 rounded px-1.5 py-0.5 text-xs text-muted-foreground bg-muted/60">
+            {formatDueDate(task.dueDate)}
+          </span>
+        )}
+        {editingDueDateId === task.id ? (
+          <input
+            type="date"
+            value={task.dueDate ?? ""}
+            onChange={(e) => {
+              const v = e.target.value || null;
+              updateTask(task.id, { dueDate: v });
+              setEditingDueDateId(null);
+            }}
+            onBlur={() => setEditingDueDateId(null)}
+            autoFocus
+            className="h-7 rounded border bg-background px-1.5 text-xs"
+          />
+        ) : null}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -175,10 +210,16 @@ export function TaskList({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-40">
             {mode === "default" && (
-              <DropdownMenuItem onClick={() => handleEditStart(task)}>
-                <Pencil className="size-4" />
-                编辑
-              </DropdownMenuItem>
+              <>
+                <DropdownMenuItem onClick={() => handleEditStart(task)}>
+                  <Pencil className="size-4" />
+                  编辑
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setEditingDueDateId(task.id)}>
+                  <Calendar className="size-4" />
+                  截止日期
+                </DropdownMenuItem>
+              </>
             )}
             {(mode === "completed" || mode === "abandoned" || mode === "trash") && (
               <DropdownMenuItem onClick={() => restoreTask(task.id)}>
@@ -223,8 +264,18 @@ export function TaskList({
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="添加任务"
-              className="h-8 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+              className="h-8 flex-1 min-w-0 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
             />
+            {filter !== "today" && filter !== "tomorrow" && (
+              <input
+                type="date"
+                value={addDueDate}
+                onChange={(e) => setAddDueDate(e.target.value)}
+                className="h-7 rounded border-0 bg-transparent text-xs text-muted-foreground"
+                title="截止日期"
+                aria-label="截止日期"
+              />
+            )}
           </div>
         </form>
       )}

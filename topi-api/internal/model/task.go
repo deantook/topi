@@ -26,6 +26,7 @@ type Task struct {
 	Status    TaskStatus `gorm:"size:16;default:active" json:"status"`
 	Order     int        `gorm:"column:sort_order;default:0" json:"sort_order"`
 	CreatedAt time.Time  `json:"created_at"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 func (t *Task) BeforeCreate(tx *gorm.DB) error {

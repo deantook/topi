@@ -95,7 +95,11 @@ func (s *TaskService) Update(userID, id string, title *string, listID *string, d
 		t.ListID = listID
 	}
 	if dueDate != nil {
-		t.DueDate = dueDate
+		if *dueDate == "" {
+			t.DueDate = nil
+		} else {
+			t.DueDate = dueDate
+		}
 	}
 	return s.repo.Update(t)
 }
