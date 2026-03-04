@@ -22,6 +22,7 @@ import {
   Flag,
 } from "lucide-react";
 import { AddTaskInput } from "./add-task-input";
+import { DateTimePickerPopover } from "./datetime-picker";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import {
@@ -221,25 +222,29 @@ function SortableTaskRow({
               {getList(task.listId)?.name ?? "·"}
             </span>
           )}
-          {task.dueDate && editingDueDateId !== task.id && (
-            <span className="shrink-0 rounded px-1.5 py-0.5 text-xs text-muted-foreground bg-muted/60">
-              {formatDueDate(task.dueDate)}
-            </span>
-          )}
-          {editingDueDateId === task.id ? (
-            <input
-              type="datetime-local"
-              value={task.dueDate ? task.dueDate.replace(" ", "T").slice(0, 16) : ""}
-              onChange={(e) => {
-                const v = e.target.value;
-                updateTask(task.id, { dueDate: v ? v.replace("T", " ") + ":00" : null });
-                setEditingDueDateId(null);
-              }}
-              onBlur={() => setEditingDueDateId(null)}
-              autoFocus
-              className="h-7 rounded border bg-background px-1.5 text-xs"
-            />
-          ) : null}
+          <DateTimePickerPopover
+            value={task.dueDate ?? null}
+            onChange={(v) => updateTask(task.id, { dueDate: v })}
+            open={editingDueDateId === task.id}
+            onOpenChange={(open) => setEditingDueDateId(open ? task.id : null)}
+            trigger={
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="shrink-0 h-auto rounded px-1.5 py-0.5 text-xs text-muted-foreground bg-muted/60 hover:bg-muted/80"
+              >
+                {task.dueDate ? (
+                  formatDueDate(task.dueDate)
+                ) : (
+                  <>
+                    <Calendar className="size-3.5 mr-0.5 shrink-0" />
+                    设置截止日期
+                  </>
+                )}
+              </Button>
+            }
+          />
         </div>
       </ContextMenuTrigger>
       {contextMenuContent}
@@ -478,34 +483,31 @@ export function TaskList({
                 {getList(task.listId)?.name ?? "·"}
               </span>
             )}
-            {task.dueDate && !editingDueDateId && (
-              <span className="shrink-0 rounded px-1.5 py-0.5 text-xs text-muted-foreground bg-muted/60">
-                {formatDueDate(task.dueDate)}
-              </span>
-            )}
+            <DateTimePickerPopover
+              value={task.dueDate ?? null}
+              onChange={(v) => updateTask(task.id, { dueDate: v })}
+              open={editingDueDateId === task.id}
+              onOpenChange={(open) => setEditingDueDateId(open ? task.id : null)}
+              trigger={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0 h-auto rounded px-1.5 py-0.5 text-xs text-muted-foreground bg-muted/60 hover:bg-muted/80"
+                >
+                  {task.dueDate ? (
+                    formatDueDate(task.dueDate)
+                  ) : (
+                    <>
+                      <Calendar className="size-3.5 mr-0.5 shrink-0" />
+                      设置截止日期
+                    </>
+                  )}
+                </Button>
+              }
+            />
           </>
         )}
-        {editingDueDateId === task.id ? (
-          <input
-            type="datetime-local"
-            value={
-              task.dueDate
-                ? task.dueDate.replace(" ", "T").slice(0, 16)
-                : ""
-            }
-            onChange={(e) => {
-              const v = e.target.value;
-              updateTask(
-                task.id,
-                { dueDate: v ? v.replace("T", " ") + ":00" : null }
-              );
-              setEditingDueDateId(null);
-            }}
-            onBlur={() => setEditingDueDateId(null)}
-            autoFocus
-            className="h-7 rounded border bg-background px-1.5 text-xs"
-          />
-        ) : null}
       </div>
         </ContextMenuTrigger>
         {contextMenuContent}
