@@ -3,19 +3,56 @@ package service
 import (
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/deantook/topi-api/internal/model"
 	"github.com/deantook/topi-api/internal/repository"
 	"gorm.io/gorm"
 )
 
-// normalizeDateString ensures YYYY-MM-DD for MySQL DATE column (rejects ISO datetimes).
-func normalizeDateString(s string) string {
+// normalizeDateTimeString accepts yyyy-MM-dd, yyyy-MM-dd HH:mm:ss, yyyy-MM-ddTHH:mm etc., outputs yyyy-MM-dd HH:mm:ss.
+func normalizeDateTimeString(s string) string {
 	s = strings.TrimSpace(s)
-	if len(s) >= 10 && s[4] == '-' && s[7] == '-' {
-		return s[:10]
+	if s == "" {
+		return s
+	}
+	layouts := []string{
+		"2006-01-02 15:04:05",
+		"2006-01-02 15:04",
+		"2006-01-02T15:04:05",
+		"2006-01-02T15:04",
+		"2006-01-02",
+	}
+	for _, layout := range layouts {
+		if t, err := time.Parse(layout, s); err == nil {
+			return t.Format("2006-01-02 15:04:05")
+		}
 	}
 	return s
+}
+
+// parseLocalToUTC parses local time string in the given location, returns UTC as "yyyy-MM-dd HH:mm:ss".
+func parseLocalToUTC(localStr string, loc *time.Location) (string, error) {
+	if loc == nil {
+		loc = time.UTC
+	}
+	t, err := time.ParseInLocation("2006-01-02 15:04:05", localStr, loc)
+	if err != nil {
+		return "", err
+	}
+	return t.UTC().Format("2006-01-02 15:04:05"), nil
+}
+
+// formatUTCToLocal parses UTC string, converts to local, returns "yyyy-MM-dd HH:mm:ss".
+func formatUTCToLocal(utcStr string, loc *time.Location) string {
+	if loc == nil {
+		loc = time.UTC
+	}
+	t, err := time.ParseInLocation("2006-01-02 15:04:05", utcStr, time.UTC)
+	if err != nil {
+		return utcStr
+	}
+	return t.In(loc).Format("2006-01-02 15:04:05")
 }
 
 var ErrTaskNotFound = errors.New("task not found")
@@ -28,7 +65,7 @@ func NewTaskService(repo *repository.TaskRepository) *TaskService {
 	return &TaskService{repo: repo}
 }
 
-func (s *TaskService) Create(userID string, title string, listID *string, dueDate *string, priority *string) (*model.Task, error) {
+func (s *TaskService) Create(userID string, title string, listID *string, dueDate *string, priority *string, loc *time.Location) (*model.Task, error) {
 	tasks, _ := s.repo.ListByUserID(userID, "all", nil)
 	maxOrder := 0
 	for _, t := range tasks {
@@ -45,8 +82,12 @@ func (s *TaskService) Create(userID string, title string, listID *string, dueDat
 	}
 	var normalizedDue *string
 	if dueDate != nil && *dueDate != "" {
-		d := normalizeDateString(*dueDate)
-		normalizedDue = &d
+		localStr := normalizeDateTimeString(*dueDate)
+		utcStr, err := parseLocalToUTC(localStr, loc)
+		if err != nil {
+			return nil, err
+		}
+		normalizedDue = &utcStr
 	}
 	t := &model.Task{
 		UserID:   userID,
@@ -63,19 +104,26 @@ func (s *TaskService) Create(userID string, title string, listID *string, dueDat
 	return t, nil
 }
 
-func (s *TaskService) List(userID, filter string, listID *string, date, startDate, endDate string) ([]model.Task, error) {
+func (s *TaskService) List(userID, filter string, listID *string, date, startDate, endDate string, loc *time.Location) ([]model.Task, error) {
 	tasks, err := s.repo.ListByUserID(userID, filter, listID)
 	if err != nil {
 		return nil, err
 	}
-	// 日期过滤：使用前端传入的日期（用户本地时区），today/tomorrow 传 date，recent-seven 传 startDate+endDate
+	if loc == nil {
+		loc = time.UTC
+	}
+	// 日期过滤：DB 存 UTC，转为用户本地日期再与 date 比较
 	if filter == "today" || filter == "tomorrow" {
 		if date == "" {
 			return tasks, nil
 		}
 		var filtered []model.Task
 		for _, t := range tasks {
-			if t.DueDate != nil && *t.DueDate == date {
+			if t.DueDate == nil {
+				continue
+			}
+			localStr := formatUTCToLocal(*t.DueDate, loc)
+			if len(localStr) >= 10 && localStr[:10] == date {
 				filtered = append(filtered, t)
 			}
 		}
@@ -90,9 +138,12 @@ func (s *TaskService) List(userID, filter string, listID *string, date, startDat
 			if t.DueDate == nil {
 				continue
 			}
-			d := *t.DueDate
-			if d >= startDate && d <= endDate {
-				filtered = append(filtered, t)
+			localStr := formatUTCToLocal(*t.DueDate, loc)
+			if len(localStr) >= 10 {
+				d := localStr[:10]
+				if d >= startDate && d <= endDate {
+					filtered = append(filtered, t)
+				}
 			}
 		}
 		return filtered, nil
@@ -100,7 +151,7 @@ func (s *TaskService) List(userID, filter string, listID *string, date, startDat
 	return tasks, nil
 }
 
-func (s *TaskService) Update(userID, id string, title *string, listID *string, dueDate *string, priority *string) error {
+func (s *TaskService) Update(userID, id string, title *string, listID *string, dueDate *string, priority *string, loc *time.Location) error {
 	if _, err := s.repo.GetByIDAndUserID(id, userID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return ErrTaskNotFound
@@ -118,7 +169,12 @@ func (s *TaskService) Update(userID, id string, title *string, listID *string, d
 		if *dueDate == "" {
 			fields["due_date"] = nil
 		} else {
-			fields["due_date"] = normalizeDateString(*dueDate)
+			localStr := normalizeDateTimeString(*dueDate)
+			utcStr, err := parseLocalToUTC(localStr, loc)
+			if err != nil {
+				return err
+			}
+			fields["due_date"] = utcStr
 		}
 	}
 	if priority != nil {

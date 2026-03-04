@@ -2,12 +2,33 @@ package handler
 
 import (
 	"net/http"
+	"time"
 
+	"github.com/deantook/topi-api/internal/model"
 	"github.com/deantook/topi-api/internal/middleware"
 	"github.com/deantook/topi-api/internal/service"
 	"github.com/deantook/topi-api/pkg/response"
+	"github.com/deantook/topi-api/pkg/timezone"
 	"github.com/gin-gonic/gin"
 )
+
+func formatTaskForResponse(t model.Task, loc *time.Location) map[string]interface{} {
+	if loc == nil {
+		loc = time.UTC
+	}
+	m := map[string]interface{}{
+		"id": t.ID, "list_id": t.ListID, "title": t.Title,
+		"completed": t.Completed, "priority": t.Priority, "status": t.Status,
+		"sort_order": t.Order,
+	}
+	m["created_at"] = t.CreatedAt.In(loc).Format(timezone.Layout)
+	if t.DueDate != nil {
+		m["due_date"] = timezone.FormatUTCToLocal(*t.DueDate, loc)
+	} else {
+		m["due_date"] = nil
+	}
+	return m
+}
 
 type TaskHandler struct {
 	svc *service.TaskService
@@ -28,12 +49,22 @@ func (h *TaskHandler) List(c *gin.Context) {
 	if listID != "" {
 		lp = &listID
 	}
-	tasks, err := h.svc.List(userID, filter, lp, date, startDate, endDate)
+	loc := time.UTC
+	if val, exists := c.Get(timezone.ContextKey); exists && val != nil {
+		if l, ok := val.(*time.Location); ok {
+			loc = l
+		}
+	}
+	tasks, err := h.svc.List(userID, filter, lp, date, startDate, endDate, loc)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
-	response.OK(c, tasks)
+	out := make([]map[string]interface{}, 0, len(tasks))
+	for _, t := range tasks {
+		out = append(out, formatTaskForResponse(t, loc))
+	}
+	response.OK(c, out)
 }
 
 type CreateTaskReq struct {
@@ -50,12 +81,19 @@ func (h *TaskHandler) Create(c *gin.Context) {
 		response.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
-	t, err := h.svc.Create(userID, req.Title, req.ListID, req.DueDate, req.Priority)
+	var loc *time.Location
+	if val, exists := c.Get(timezone.ContextKey); exists && val != nil {
+		if l, ok := val.(*time.Location); ok {
+			loc = l
+		}
+	}
+	t, err := h.svc.Create(userID, req.Title, req.ListID, req.DueDate, req.Priority, loc)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
-	response.OK(c, t)
+	out := formatTaskForResponse(*t, loc)
+	response.OK(c, out)
 }
 
 type UpdateTaskReq struct {
@@ -73,7 +111,13 @@ func (h *TaskHandler) Update(c *gin.Context) {
 		response.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
-	if err := h.svc.Update(userID, id, req.Title, req.ListID, req.DueDate, req.Priority); err != nil {
+	var loc *time.Location
+	if val, exists := c.Get(timezone.ContextKey); exists && val != nil {
+		if l, ok := val.(*time.Location); ok {
+			loc = l
+		}
+	}
+	if err := h.svc.Update(userID, id, req.Title, req.ListID, req.DueDate, req.Priority, loc); err != nil {
 		if err == service.ErrTaskNotFound {
 			response.Error(c, http.StatusNotFound, "task not found")
 			return
