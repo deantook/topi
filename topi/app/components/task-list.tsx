@@ -16,15 +16,14 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
-  Plus,
   GripVertical,
   MoreHorizontal,
   Trash2,
   Calendar,
   Flag,
 } from "lucide-react";
+import { AddTaskInput } from "./add-task-input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   ContextMenu,
@@ -330,52 +329,10 @@ export function TaskList({
     filter === "today" ||
     filter === "tomorrow" ||
     filter === "recent-seven";
-  const [input, setInput] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
   const [editingDueDateId, setEditingDueDateId] = useState<string | null>(null);
-  const [addDueDate, setAddDueDate] = useState<string>("");
-  const [addPriority, setAddPriority] = useState<TaskPriority>("none");
   const [hoverId, setHoverId] = useState<string | null>(null);
-
-  const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault();
-      const trimmed = input.trim();
-      if (!trimmed) return;
-      let options: {
-        listId?: string;
-        dueDate?: string;
-        priority?: TaskPriority;
-      } | undefined;
-      if (typeof filter === "object" && "listId" in filter) {
-        options = { listId: filter.listId };
-      } else if (filter === "today" || filter === "tomorrow") {
-        const d = new Date();
-        if (filter === "tomorrow") d.setDate(d.getDate() + 1);
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, "0");
-        const day = String(d.getDate()).padStart(2, "0");
-        const h = String(d.getHours()).padStart(2, "0");
-        const min = String(d.getMinutes()).padStart(2, "0");
-        options = { dueDate: `${y}-${m}-${day} ${h}:${min}:00` };
-      }
-      if (addDueDate) {
-        const normalized = addDueDate.includes("T")
-          ? addDueDate.replace("T", " ") + ":00"
-          : addDueDate.length === 10
-            ? addDueDate + " 00:00:00"
-            : addDueDate;
-        options = { ...options, dueDate: normalized };
-      }
-      if (addPriority !== "none") {
-        options = { ...options, priority: addPriority };
-      }
-      addTask(trimmed, options);
-      setInput("");
-    },
-    [input, filter, addTask, addDueDate, addPriority]
-  );
 
   const handleToggle = useCallback(
     (task: Task) => {
@@ -684,57 +641,10 @@ export function TaskList({
       </div>
 
       {showAddInput && (
-        <form onSubmit={handleSubmit} className="ml-5">
-          <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-muted/30 pl-3 pr-3 py-2 dark:border-gray-700">
-            <Plus className="size-4 shrink-0 text-muted-foreground text-[rgba(0,0,0,1)]" />
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="添加任务"
-              className="h-8 flex-1 min-w-0 border-0 bg-transparent px-0 shadow-none text-[rgba(143,146,168,1)] placeholder:text-muted-foreground focus-visible:ring-0"
-            />
-            {filter !== "today" && filter !== "tomorrow" && (
-              <>
-                <input
-                  type="datetime-local"
-                  value={
-                    addDueDate
-                      ? addDueDate.includes(" ")
-                        ? addDueDate.replace(" ", "T").slice(0, 16)
-                        : addDueDate.length >= 10
-                          ? addDueDate.slice(0, 10) + "T00:00"
-                          : addDueDate
-                      : ""
-                  }
-                  onChange={(e) =>
-                    setAddDueDate(
-                      e.target.value
-                        ? e.target.value.replace("T", " ") + ":00"
-                        : ""
-                    )
-                  }
-                  className="h-7 rounded border-0 bg-transparent text-xs text-muted-foreground"
-                  title="截止日期"
-                  aria-label="截止日期"
-                />
-                <select
-                  value={addPriority}
-                  onChange={(e) =>
-                    setAddPriority(e.target.value as TaskPriority)
-                  }
-                  className="h-7 rounded border-0 bg-transparent text-xs text-muted-foreground"
-                  title="优先级"
-                  aria-label="优先级"
-                >
-                  <option value="none">{PRIORITY_LABEL.none}</option>
-                  <option value="high">{PRIORITY_LABEL.high}</option>
-                  <option value="medium">{PRIORITY_LABEL.medium}</option>
-                  <option value="low">{PRIORITY_LABEL.low}</option>
-                </select>
-              </>
-            )}
-          </div>
-        </form>
+        <AddTaskInput
+          filter={filter}
+          onSubmit={(text, options) => addTask(text, options)}
+        />
       )}
 
       <div className="flex flex-col">
