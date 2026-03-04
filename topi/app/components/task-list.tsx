@@ -182,7 +182,7 @@ function SortableTaskRow({
           ref={setNodeRef}
           style={style}
           className={cn(
-            "group flex items-center gap-2 rounded-md px-2 py-2 transition-colors cursor-text",
+            "group flex items-center gap-2 px-2 py-2 transition-colors cursor-text",
             isHovered && "bg-muted/50",
             isDragging && "opacity-90 shadow-md z-10"
           )}
@@ -524,7 +524,7 @@ export function TaskList({
       <div
         key={task.id}
         className={cn(
-          "group flex items-center gap-2 rounded-md px-2 py-2 transition-colors cursor-text",
+          "group flex items-center gap-2 px-2 py-2 transition-colors cursor-text",
           isHovered && "bg-muted/50"
         )}
         onMouseEnter={() => setHoverId(task.id)}
@@ -702,14 +702,14 @@ export function TaskList({
       </div>
 
       {showAddInput && (
-        <form onSubmit={handleSubmit}>
-          <div className="flex items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2">
-            <Plus className="size-4 shrink-0 text-muted-foreground" />
+        <form onSubmit={handleSubmit} className="ml-5">
+          <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-muted/30 pl-3 pr-3 py-2 dark:border-gray-700">
+            <Plus className="size-4 shrink-0 text-muted-foreground text-[rgba(0,0,0,1)]" />
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="添加任务"
-              className="h-8 flex-1 min-w-0 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+              className="h-8 flex-1 min-w-0 border-0 bg-transparent px-0 shadow-none text-[rgba(143,146,168,1)] placeholder:text-muted-foreground focus-visible:ring-0"
             />
             {filter !== "today" && filter !== "tomorrow" && (
               <>
@@ -755,12 +755,12 @@ export function TaskList({
         </form>
       )}
 
-      <div className="flex flex-col gap-0.5">
+      <div className="flex flex-col">
         {isLoading ? (
           <>
-            <Skeleton className="h-10 w-full rounded-md" />
-            <Skeleton className="h-10 w-full rounded-md" />
-            <Skeleton className="h-10 w-full rounded-md" />
+            <Skeleton className="h-10 w-full rounded-none" />
+            <Skeleton className="h-10 w-full rounded-none" />
+            <Skeleton className="h-10 w-full rounded-none" />
           </>
         ) : tasks.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
@@ -771,8 +771,18 @@ export function TaskList({
         ) : mode === "default" && tasks.length > 0 ? (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-              {tasks.map((task) => (
-                <SortableTaskRow
+              {tasks.map((task, index) => (
+                <div key={task.id}>
+                  {index > 0 && (
+                    <div
+                      className={cn(
+                        "h-px bg-gray-200 dark:bg-gray-700",
+                        mode === "default" ? "ml-14" : "ml-8"
+                      )}
+                      aria-hidden
+                    />
+                  )}
+                  <SortableTaskRow
                   key={task.id}
                   task={task}
                   mode={mode}
@@ -793,11 +803,25 @@ export function TaskList({
                   getList={getList}
                   setEditingText={setEditingText}
                 />
+                </div>
               ))}
             </SortableContext>
           </DndContext>
         ) : (
-          tasks.map(renderTaskItem)
+          tasks.map((task, index) => (
+            <div key={task.id}>
+              {index > 0 && (
+                <div
+                  className={cn(
+                    "h-px bg-gray-200 dark:bg-gray-700",
+                    mode === "default" ? "ml-14" : "ml-8"
+                  )}
+                  aria-hidden
+                />
+              )}
+              {renderTaskItem(task)}
+            </div>
+          ))
         )}
       </div>
     </div>
