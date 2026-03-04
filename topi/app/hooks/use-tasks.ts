@@ -65,11 +65,25 @@ export type TaskFilter =
   | "abandoned"
   | "trash";
 
-function filterToQuery(filter: TaskFilter): Record<string, string> {
+function filterToQuery(filter: TaskFilter, refDate: Date): Record<string, string> {
   if (typeof filter === "object" && "listId" in filter) {
     return { listId: filter.listId };
   }
-  return { filter: String(filter) };
+  const params: Record<string, string> = { filter: String(filter) };
+  if (filter === "today" || filter === "tomorrow") {
+    const d = new Date(refDate);
+    if (filter === "tomorrow") d.setDate(d.getDate() + 1);
+    params.date = d.toISOString().slice(0, 10);
+  } else if (filter === "recent-seven") {
+    const today = new Date(refDate);
+    today.setHours(0, 0, 0, 0);
+    const start = today.toISOString().slice(0, 10);
+    const end = new Date(today);
+    end.setDate(end.getDate() + 6);
+    params.startDate = start;
+    params.endDate = end.toISOString().slice(0, 10);
+  }
+  return params;
 }
 
 function isoDate(d: Date): string {
@@ -160,7 +174,7 @@ export function useTasks(filter: TaskFilter) {
   const fetchTasks = useCallback(async () => {
     setIsLoading(true);
     try {
-      const params = filterToQuery(filter);
+      const params = filterToQuery(filter, new Date());
       const query = new URLSearchParams(params).toString();
       const path = query ? `/tasks?${query}` : "/tasks";
       const res = (await apiClient.get(path)) as { data: ApiTask[] };

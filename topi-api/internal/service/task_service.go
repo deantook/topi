@@ -2,7 +2,6 @@ package service
 
 import (
 	"errors"
-	"time"
 
 	"github.com/deantook/topi-api/internal/model"
 	"github.com/deantook/topi-api/internal/repository"
@@ -49,38 +48,36 @@ func (s *TaskService) Create(userID string, title string, listID *string, dueDat
 	return t, nil
 }
 
-func (s *TaskService) List(userID, filter string, listID *string) ([]model.Task, error) {
+func (s *TaskService) List(userID, filter string, listID *string, date, startDate, endDate string) ([]model.Task, error) {
 	tasks, err := s.repo.ListByUserID(userID, filter, listID)
 	if err != nil {
 		return nil, err
 	}
-	// 日期过滤：today, tomorrow, recent-seven
-	if filter == "today" || filter == "tomorrow" || filter == "recent-seven" {
-		now := time.Now()
-		today := now.Format("2006-01-02")
-		tomorrow := now.AddDate(0, 0, 1).Format("2006-01-02")
-		weekEnd := now.AddDate(0, 0, 7)
-
+	// 日期过滤：使用前端传入的日期（用户本地时区），today/tomorrow 传 date，recent-seven 传 startDate+endDate
+	if filter == "today" || filter == "tomorrow" {
+		if date == "" {
+			return tasks, nil
+		}
+		var filtered []model.Task
+		for _, t := range tasks {
+			if t.DueDate != nil && *t.DueDate == date {
+				filtered = append(filtered, t)
+			}
+		}
+		return filtered, nil
+	}
+	if filter == "recent-seven" {
+		if startDate == "" || endDate == "" {
+			return tasks, nil
+		}
 		var filtered []model.Task
 		for _, t := range tasks {
 			if t.DueDate == nil {
 				continue
 			}
 			d := *t.DueDate
-			switch filter {
-			case "today":
-				if d == today {
-					filtered = append(filtered, t)
-				}
-			case "tomorrow":
-				if d == tomorrow {
-					filtered = append(filtered, t)
-				}
-			case "recent-seven":
-				td, _ := time.Parse("2006-01-02", d)
-				if td.After(now) && td.Before(weekEnd) {
-					filtered = append(filtered, t)
-				}
+			if d >= startDate && d <= endDate {
+				filtered = append(filtered, t)
 			}
 		}
 		return filtered, nil

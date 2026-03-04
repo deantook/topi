@@ -21,11 +21,14 @@ func (h *TaskHandler) List(c *gin.Context) {
 	userID := c.GetString(middleware.UserIDKey)
 	filter := c.DefaultQuery("filter", "all")
 	listID := c.Query("listId")
+	date := c.Query("date")
+	startDate := c.Query("startDate")
+	endDate := c.Query("endDate")
 	var lp *string
 	if listID != "" {
 		lp = &listID
 	}
-	tasks, err := h.svc.List(userID, filter, lp)
+	tasks, err := h.svc.List(userID, filter, lp, date, startDate, endDate)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return

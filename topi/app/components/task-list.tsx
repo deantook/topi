@@ -36,10 +36,10 @@ const PRIORITY_LABEL: Record<TaskPriority, string> = {
   none: "无",
 };
 
-const PRIORITY_BADGE_CLASS: Record<Exclude<TaskPriority, "none">, string> = {
-  high: "bg-red-500/20 text-red-600 dark:text-red-400",
-  medium: "bg-blue-500/20 text-blue-600 dark:text-blue-400",
-  low: "bg-muted text-muted-foreground",
+const PRIORITY_FLAG_CLASS: Record<Exclude<TaskPriority, "none">, string> = {
+  high: "text-red-500",
+  medium: "text-blue-500",
+  low: "text-muted-foreground",
 };
 
 function formatDueDate(dateStr: string | null, refDate = new Date()): string | null {
@@ -217,14 +217,10 @@ export function TaskList({
               </span>
             )}
             {task.priority !== "none" && (
-              <span
-                className={cn(
-                  "shrink-0 rounded px-1.5 py-0.5 text-xs",
-                  PRIORITY_BADGE_CLASS[task.priority]
-                )}
-              >
-                {PRIORITY_LABEL[task.priority]}
-              </span>
+              <Flag
+                className={cn("size-3.5 shrink-0", PRIORITY_FLAG_CLASS[task.priority])}
+                aria-label={PRIORITY_LABEL[task.priority]}
+              />
             )}
           </>
         )}
