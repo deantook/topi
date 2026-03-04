@@ -1,8 +1,14 @@
 "use client";
 
-import { Sun, ArrowRight, CalendarDays } from "lucide-react";
+import type { ReactNode } from "react";
+import { Sun, ArrowRight, CalendarDays, CalendarClock } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 const HH_MM_REGEX = /^([01]?\d|2[0-3]):([0-5]\d)$/;
 
@@ -49,12 +55,14 @@ export interface DateTimePickerProps {
   value: string | null;
   onChange: (v: string | null) => void;
   onConfirm?: () => void;
+  onClear?: () => void;
 }
 
 export function DateTimePicker({
   value,
   onChange,
   onConfirm,
+  onClear,
 }: DateTimePickerProps) {
   const datePart = value ? value.slice(0, 10) : null;
   const timePart =
@@ -139,7 +147,10 @@ export function DateTimePicker({
           type="button"
           variant="ghost"
           size="xs"
-          onClick={() => onChange(null)}
+          onClick={() => {
+            onChange(null);
+            onClear?.();
+          }}
         >
           清除
         </Button>
@@ -153,5 +164,49 @@ export function DateTimePicker({
         </Button>
       </div>
     </div>
+  );
+}
+
+export interface DateTimePickerPopoverProps {
+  value: string | null;
+  onChange: (v: string | null) => void;
+  trigger?: ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+export function DateTimePickerPopover({
+  value,
+  onChange,
+  trigger,
+  open,
+  onOpenChange,
+}: DateTimePickerPopoverProps) {
+  const defaultTrigger = (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon-sm"
+      aria-label="截止日期"
+      className="shrink-0 text-muted-foreground"
+    >
+      <CalendarClock className="size-4" />
+    </Button>
+  );
+
+  return (
+    <Popover open={open} onOpenChange={onOpenChange}>
+      <PopoverTrigger asChild>
+        {trigger ?? defaultTrigger}
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-auto p-0">
+        <DateTimePicker
+          value={value}
+          onChange={onChange}
+          onConfirm={() => onOpenChange?.(false)}
+          onClear={() => onOpenChange?.(false)}
+        />
+      </PopoverContent>
+    </Popover>
   );
 }
