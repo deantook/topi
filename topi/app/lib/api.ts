@@ -23,6 +23,8 @@ async function request<T = Response>(
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
   }
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  headers.set("X-Timezone", tz);
   const res = await fetch(url, { ...fetchInit, headers });
   if (res.status === 401) {
     localStorage.removeItem(TOKEN_KEY);
