@@ -173,6 +173,7 @@ export interface DateTimePickerPopoverProps {
   trigger?: ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  contentProps?: React.ComponentProps<typeof PopoverContent>;
 }
 
 export function DateTimePickerPopover({
@@ -181,6 +182,7 @@ export function DateTimePickerPopover({
   trigger,
   open,
   onOpenChange,
+  contentProps,
 }: DateTimePickerPopoverProps) {
   const defaultTrigger = (
     <Button
@@ -199,7 +201,7 @@ export function DateTimePickerPopover({
       <PopoverTrigger asChild>
         {trigger ?? defaultTrigger}
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-auto p-0">
+      <PopoverContent align="start" className="w-auto p-0" {...contentProps}>
         <DateTimePicker
           value={value}
           onChange={onChange}

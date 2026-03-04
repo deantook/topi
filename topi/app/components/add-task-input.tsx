@@ -5,26 +5,18 @@ import { CalendarClock, Flag, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Calendar } from "@/components/ui/calendar";
+import {
+  DateTimePickerPopover,
+  formatDueDateForDisplay,
+} from "@/components/datetime-picker";
 import type { TaskFilter, TaskPriority } from "@/hooks/use-tasks";
 import { PRIORITY_LABEL, PRIORITY_FLAG_CLASS } from "@/lib/task-constants";
 import { cn } from "@/lib/utils";
-
-const HH_MM_REGEX = /^([01]?\d|2[0-3]):([0-5]\d)$/;
-
-function isValidTime(value: string): boolean {
-  return HH_MM_REGEX.test(value) || value === "";
-}
 
 export interface AddTaskInputProps {
   filter: TaskFilter;
@@ -32,15 +24,6 @@ export interface AddTaskInputProps {
     text: string,
     options?: { listId?: string; dueDate?: string; priority?: TaskPriority }
   ) => void;
-}
-
-function formatDueDateForDisplay(dateStr: string): string {
-  if (!dateStr) return "";
-  const [y, m, d] = dateStr.slice(0, 10).split("-");
-  const timePart = dateStr.length >= 19 ? dateStr.slice(11, 16) : null;
-  return timePart
-    ? `${parseInt(m, 10)}月${parseInt(d, 10)}日 ${timePart}`
-    : `${parseInt(m, 10)}月${parseInt(d, 10)}日`;
 }
 
 function isInsideAddTaskControl(el: Element | null): boolean {
@@ -134,8 +117,10 @@ export function AddTaskInput({ filter, onSubmit }: AddTaskInputProps) {
         {showRightControls && (
           <div className="flex items-center gap-2 shrink-0">
         {!hideDatePicker && (
-          <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
-            <PopoverTrigger asChild>
+          <DateTimePickerPopover
+            value={addDueDate || null}
+            onChange={(v) => setAddDueDate(v ?? "")}
+            trigger={
               <Button
                 variant="ghost"
                 size={addDueDate ? "xs" : "icon-sm"}
@@ -153,70 +138,14 @@ export function AddTaskInput({ filter, onSubmit }: AddTaskInputProps) {
                   <CalendarClock className="size-4" />
                 )}
               </Button>
-            </PopoverTrigger>
-            <PopoverContent data-add-task-control align="start" className="w-auto p-0 !bg-white dark:!bg-background">
-              <div className="flex flex-col gap-2 p-2 !bg-white dark:!bg-background">
-                <Calendar
-                  mode="single"
-                  selected={
-                    addDueDate
-                      ? new Date(addDueDate.slice(0, 10))
-                      : undefined
-                  }
-                  onSelect={(date: Date | undefined) => {
-                    if (!date) return;
-                    const y = date.getFullYear();
-                    const m = String(date.getMonth() + 1).padStart(2, "0");
-                    const d = String(date.getDate()).padStart(2, "0");
-                    const timePart = addDueDate.length >= 16 ? addDueDate.slice(11, 16) : null;
-                    if (timePart && isValidTime(timePart)) {
-                      setAddDueDate(`${y}-${m}-${d} ${timePart}:00`);
-                    } else {
-                      setAddDueDate(`${y}-${m}-${d} 00:00:00`);
-                    }
-                  }}
-                />
-                <div className="flex items-center gap-2 border-t pt-2">
-                  <input
-                    type="time"
-                    value={
-                      addDueDate && addDueDate.length >= 16
-                        ? addDueDate.slice(11, 16)
-                        : "00:00"
-                    }
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      const datePart = addDueDate ? addDueDate.slice(0, 10) : null;
-                      const fallbackDate = () => {
-                        const d = new Date();
-                        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-                      };
-                      const useDate = datePart ?? fallbackDate();
-                      setAddDueDate(`${useDate} ${v}:00`);
-                    }}
-                    onFocus={() => {
-                      if (!addDueDate) {
-                        const d = new Date();
-                        const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-                        setAddDueDate(`${ds} 00:00:00`);
-                      }
-                    }}
-                    className="h-8 w-20 min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm dark:bg-input/30"
-                  />
-                  <Button
-                    variant="ghost"
-                    size="xs"
-                    onClick={() => {
-                      setAddDueDate("");
-                      setDatePopoverOpen(false);
-                    }}
-                  >
-                    清除
-                  </Button>
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
+            }
+            open={datePopoverOpen}
+            onOpenChange={setDatePopoverOpen}
+            contentProps={{
+              "data-add-task-control": true,
+              className: "w-auto p-0 !bg-white dark:!bg-background",
+            }}
+          />
         )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
