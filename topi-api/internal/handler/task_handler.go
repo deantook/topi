@@ -34,9 +34,10 @@ func (h *TaskHandler) List(c *gin.Context) {
 }
 
 type CreateTaskReq struct {
-	Title   string  `json:"title" binding:"required"`
-	ListID  *string `json:"listId"`
-	DueDate *string `json:"dueDate"`
+	Title    string   `json:"title" binding:"required"`
+	ListID   *string  `json:"listId"`
+	DueDate  *string  `json:"dueDate"`
+	Priority *string  `json:"priority"`
 }
 
 func (h *TaskHandler) Create(c *gin.Context) {
@@ -46,7 +47,7 @@ func (h *TaskHandler) Create(c *gin.Context) {
 		response.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
-	t, err := h.svc.Create(userID, req.Title, req.ListID, req.DueDate)
+	t, err := h.svc.Create(userID, req.Title, req.ListID, req.DueDate, req.Priority)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -55,9 +56,10 @@ func (h *TaskHandler) Create(c *gin.Context) {
 }
 
 type UpdateTaskReq struct {
-	Title   *string `json:"title"`
-	ListID  *string `json:"listId"`
-	DueDate *string `json:"dueDate"`
+	Title    *string `json:"title"`
+	ListID   *string `json:"listId"`
+	DueDate  *string `json:"dueDate"`
+	Priority *string `json:"priority"`
 }
 
 func (h *TaskHandler) Update(c *gin.Context) {
@@ -68,7 +70,7 @@ func (h *TaskHandler) Update(c *gin.Context) {
 		response.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
-	if err := h.svc.Update(userID, id, req.Title, req.ListID, req.DueDate); err != nil {
+	if err := h.svc.Update(userID, id, req.Title, req.ListID, req.DueDate, req.Priority); err != nil {
 		if err == service.ErrTaskNotFound {
 			response.Error(c, http.StatusNotFound, "task not found")
 			return

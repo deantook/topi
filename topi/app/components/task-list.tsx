@@ -1,7 +1,16 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Plus, GripVertical, MoreHorizontal, Pencil, Trash2, Calendar } from "lucide-react";
+import {
+  Plus,
+  GripVertical,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  Calendar,
+  ChevronRight,
+  Flag,
+} from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -10,12 +19,28 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { Task, TaskFilter } from "@/hooks/use-tasks";
+import type { Task, TaskFilter, TaskPriority } from "@/hooks/use-tasks";
 import { useTasks } from "@/hooks/use-tasks";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+
+const PRIORITY_LABEL: Record<TaskPriority, string> = {
+  high: "高",
+  medium: "中",
+  low: "低",
+  none: "无",
+};
+
+const PRIORITY_BADGE_CLASS: Record<Exclude<TaskPriority, "none">, string> = {
+  high: "bg-red-500/20 text-red-600 dark:text-red-400",
+  medium: "bg-blue-500/20 text-blue-600 dark:text-blue-400",
+  low: "bg-muted text-muted-foreground",
+};
 
 function formatDueDate(dateStr: string | null, refDate = new Date()): string | null {
   if (!dateStr) return null;
@@ -54,6 +79,7 @@ export function TaskList({
   const [editingText, setEditingText] = useState("");
   const [editingDueDateId, setEditingDueDateId] = useState<string | null>(null);
   const [addDueDate, setAddDueDate] = useState<string>("");
+  const [addPriority, setAddPriority] = useState<TaskPriority>("none");
   const [hoverId, setHoverId] = useState<string | null>(null);
 
   const handleSubmit = useCallback(
@@ -61,20 +87,28 @@ export function TaskList({
       e.preventDefault();
       const trimmed = input.trim();
       if (!trimmed) return;
-      let options: { listId?: string; dueDate?: string } | undefined;
+      let options: {
+        listId?: string;
+        dueDate?: string;
+        priority?: TaskPriority;
+      } | undefined;
       if (typeof filter === "object" && "listId" in filter) {
         options = { listId: filter.listId };
       } else if (filter === "today" || filter === "tomorrow") {
         const d = new Date();
         if (filter === "tomorrow") d.setDate(d.getDate() + 1);
         options = { dueDate: d.toISOString().slice(0, 10) };
-      } else if (addDueDate) {
-        options = { dueDate: addDueDate };
+      }
+      if (addDueDate) {
+        options = { ...options, dueDate: addDueDate };
+      }
+      if (addPriority !== "none") {
+        options = { ...options, priority: addPriority };
       }
       addTask(trimmed, options);
       setInput("");
     },
-    [input, filter, addTask, addDueDate]
+    [input, filter, addTask, addDueDate, addPriority]
   );
 
   const handleToggle = useCallback(
@@ -175,10 +209,24 @@ export function TaskList({
             {task.title}
           </span>
         )}
-        {mode === "default" && task.dueDate && !editingDueDateId && (
-          <span className="shrink-0 rounded px-1.5 py-0.5 text-xs text-muted-foreground bg-muted/60">
-            {formatDueDate(task.dueDate)}
-          </span>
+        {mode === "default" && (
+          <>
+            {task.dueDate && !editingDueDateId && (
+              <span className="shrink-0 rounded px-1.5 py-0.5 text-xs text-muted-foreground bg-muted/60">
+                {formatDueDate(task.dueDate)}
+              </span>
+            )}
+            {task.priority !== "none" && (
+              <span
+                className={cn(
+                  "shrink-0 rounded px-1.5 py-0.5 text-xs",
+                  PRIORITY_BADGE_CLASS[task.priority]
+                )}
+              >
+                {PRIORITY_LABEL[task.priority]}
+              </span>
+            )}
+          </>
         )}
         {editingDueDateId === task.id ? (
           <input
@@ -219,6 +267,35 @@ export function TaskList({
                   <Calendar className="size-4" />
                   截止日期
                 </DropdownMenuItem>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <Flag className="size-4" />
+                    优先级
+                    <ChevronRight className="ml-auto size-4" />
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    {(["high", "medium", "low", "none"] as const).map((p) => (
+                      <DropdownMenuItem
+                        key={p}
+                        onClick={() => updateTask(task.id, { priority: p })}
+                      >
+                        {p !== "none" ? (
+                          <span
+                            className={cn(
+                              "size-2 rounded-full",
+                              p === "high" && "bg-red-500",
+                              p === "medium" && "bg-blue-500",
+                              p === "low" && "bg-muted-foreground"
+                            )}
+                          />
+                        ) : (
+                          <span className="size-2" />
+                        )}
+                        {PRIORITY_LABEL[p]}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
               </>
             )}
             {(mode === "completed" || mode === "abandoned" || mode === "trash") && (
@@ -267,14 +344,30 @@ export function TaskList({
               className="h-8 flex-1 min-w-0 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
             />
             {filter !== "today" && filter !== "tomorrow" && (
-              <input
-                type="date"
-                value={addDueDate}
-                onChange={(e) => setAddDueDate(e.target.value)}
-                className="h-7 rounded border-0 bg-transparent text-xs text-muted-foreground"
-                title="截止日期"
-                aria-label="截止日期"
-              />
+              <>
+                <input
+                  type="date"
+                  value={addDueDate}
+                  onChange={(e) => setAddDueDate(e.target.value)}
+                  className="h-7 rounded border-0 bg-transparent text-xs text-muted-foreground"
+                  title="截止日期"
+                  aria-label="截止日期"
+                />
+                <select
+                  value={addPriority}
+                  onChange={(e) =>
+                    setAddPriority(e.target.value as TaskPriority)
+                  }
+                  className="h-7 rounded border-0 bg-transparent text-xs text-muted-foreground"
+                  title="优先级"
+                  aria-label="优先级"
+                >
+                  <option value="none">{PRIORITY_LABEL.none}</option>
+                  <option value="high">{PRIORITY_LABEL.high}</option>
+                  <option value="medium">{PRIORITY_LABEL.medium}</option>
+                  <option value="low">{PRIORITY_LABEL.low}</option>
+                </select>
+              </>
             )}
           </div>
         </form>

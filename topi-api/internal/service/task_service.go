@@ -19,7 +19,7 @@ func NewTaskService(repo *repository.TaskRepository) *TaskService {
 	return &TaskService{repo: repo}
 }
 
-func (s *TaskService) Create(userID string, title string, listID *string, dueDate *string) (*model.Task, error) {
+func (s *TaskService) Create(userID string, title string, listID *string, dueDate *string, priority *string) (*model.Task, error) {
 	tasks, _ := s.repo.ListByUserID(userID, "all", nil)
 	maxOrder := 0
 	for _, t := range tasks {
@@ -27,13 +27,21 @@ func (s *TaskService) Create(userID string, title string, listID *string, dueDat
 			maxOrder = t.Order
 		}
 	}
+	prio := model.TaskPriorityNone
+	if priority != nil {
+		switch *priority {
+		case "none", "low", "medium", "high":
+			prio = model.TaskPriority(*priority)
+		}
+	}
 	t := &model.Task{
-		UserID:  userID,
-		Title:   title,
-		ListID:  listID,
-		DueDate: dueDate,
-		Status:  model.TaskStatusActive,
-		Order:   maxOrder + 1,
+		UserID:   userID,
+		Title:    title,
+		ListID:   listID,
+		DueDate:  dueDate,
+		Priority: prio,
+		Status:   model.TaskStatusActive,
+		Order:    maxOrder + 1,
 	}
 	if err := s.repo.Create(t); err != nil {
 		return nil, err
@@ -80,7 +88,7 @@ func (s *TaskService) List(userID, filter string, listID *string) ([]model.Task,
 	return tasks, nil
 }
 
-func (s *TaskService) Update(userID, id string, title *string, listID *string, dueDate *string) error {
+func (s *TaskService) Update(userID, id string, title *string, listID *string, dueDate *string, priority *string) error {
 	t, err := s.repo.GetByIDAndUserID(id, userID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -99,6 +107,12 @@ func (s *TaskService) Update(userID, id string, title *string, listID *string, d
 			t.DueDate = nil
 		} else {
 			t.DueDate = dueDate
+		}
+	}
+	if priority != nil {
+		switch *priority {
+		case "none", "low", "medium", "high":
+			t.Priority = model.TaskPriority(*priority)
 		}
 	}
 	return s.repo.Update(t)

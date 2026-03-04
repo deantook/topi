@@ -3,12 +3,15 @@ import { apiClient } from "@/lib/api";
 
 export type TaskStatus = "active" | "completed" | "abandoned" | "trash";
 
+export type TaskPriority = "none" | "low" | "medium" | "high";
+
 export interface Task {
   id: string;
   title: string;
   completed: boolean;
   listId: string | null;
   dueDate: string | null; // ISO date string
+  priority: TaskPriority;
   status: TaskStatus;
   order: number;
   createdAt: string; // ISO string
@@ -21,18 +24,30 @@ interface ApiTask {
   completed: boolean;
   list_id: string | null;
   due_date: string | null;
+  priority?: string;
   status: TaskStatus;
   sort_order: number;
   created_at: string;
 }
 
+const PRIORITY_ORDER: Record<TaskPriority, number> = {
+  high: 0,
+  medium: 1,
+  low: 2,
+  none: 3,
+};
+
 function mapTask(r: ApiTask): Task {
+  const p = r.priority as TaskPriority | undefined;
+  const priority: TaskPriority =
+    p === "none" || p === "low" || p === "medium" || p === "high" ? p : "none";
   return {
     id: r.id,
     title: r.title,
     completed: r.completed,
     listId: r.list_id ?? null,
     dueDate: r.due_date ?? null,
+    priority,
     status: r.status,
     order: r.sort_order ?? 0,
     createdAt: r.created_at,
@@ -127,7 +142,10 @@ function filterTasks(tasks: Task[], filter: TaskFilter, refDate: Date): Task[] {
       }
   }
 
-  return [...filtered].sort((a, b) => a.order - b.order);
+  return [...filtered].sort(
+    (a, b) =>
+      PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority] || a.order - b.order
+  );
 }
 
 export function useTasks(filter: TaskFilter) {
@@ -163,12 +181,21 @@ export function useTasks(filter: TaskFilter) {
   const filteredTasks = filterTasks(tasks, filter, new Date());
 
   const addTask = useCallback(
-    async (title: string, options?: { listId?: string; dueDate?: string }) => {
-      const body: { title: string; listId?: string; dueDate?: string } = {
+    async (
+      title: string,
+      options?: { listId?: string; dueDate?: string; priority?: TaskPriority }
+    ) => {
+      const body: {
+        title: string;
+        listId?: string;
+        dueDate?: string;
+        priority?: string;
+      } = {
         title: title.trim() || "新任务",
       };
       if (options?.listId) body.listId = options.listId;
       if (options?.dueDate) body.dueDate = options.dueDate;
+      if (options?.priority) body.priority = options.priority;
       try {
         const res = (await apiClient.post("/tasks", body)) as { data: ApiTask };
         if (res?.data) {
@@ -208,12 +235,13 @@ export function useTasks(filter: TaskFilter) {
   const updateTask = useCallback(
     async (
       id: string,
-      updates: Partial<Pick<Task, "title" | "dueDate" | "listId">>
+      updates: Partial<Pick<Task, "title" | "dueDate" | "listId" | "priority">>
     ) => {
       const body: Record<string, string | null> = {};
       if (updates.title !== undefined) body.title = updates.title;
       if (updates.listId !== undefined) body.listId = updates.listId;
       if (updates.dueDate !== undefined) body.dueDate = updates.dueDate ?? "";
+      if (updates.priority !== undefined) body.priority = updates.priority;
       if (Object.keys(body).length === 0) return;
       try {
         await apiClient.patch(`/tasks/${id}`, body);
