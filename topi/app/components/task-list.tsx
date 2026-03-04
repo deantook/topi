@@ -204,14 +204,18 @@ function SortableTaskRow({
             className={PRIORITY_CHECKBOX_CLASS[task.priority]}
           />
           {isEditing ? (
-            <form onSubmit={handleEditSubmit} className="flex-1">
-              <Input
+            <form onSubmit={handleEditSubmit} className="min-w-0 flex-1">
+              <input
+                type="text"
                 value={editingText}
                 onChange={(e) => setEditingText(e.target.value)}
                 onKeyDown={(e) => handleEditKeyDown(e, task.id)}
                 onBlur={handleEditSubmit}
-                className="h-8 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
                 autoFocus
+                className={cn(
+                  "w-full min-w-0 truncate bg-transparent border-0 outline-none p-0 text-inherit focus:ring-0 focus-visible:ring-0",
+                  task.completed && "text-muted-foreground line-through"
+                )}
               />
             </form>
           ) : (
@@ -540,14 +544,18 @@ export function TaskList({
           className={mode === "default" ? PRIORITY_CHECKBOX_CLASS[task.priority] : undefined}
         />
         {isEditing ? (
-          <form onSubmit={handleEditSubmit} className="flex-1">
-            <Input
+          <form onSubmit={handleEditSubmit} className="min-w-0 flex-1">
+            <input
+              type="text"
               value={editingText}
               onChange={(e) => setEditingText(e.target.value)}
               onKeyDown={(e) => handleEditKeyDown(e, task.id)}
               onBlur={handleEditSubmit}
-              className="h-8 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
               autoFocus
+              className={cn(
+                "w-full min-w-0 truncate bg-transparent border-0 outline-none p-0 text-inherit focus:ring-0 focus-visible:ring-0",
+                task.completed && "text-muted-foreground line-through"
+              )}
             />
           </form>
         ) : (

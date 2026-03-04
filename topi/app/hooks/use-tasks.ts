@@ -277,11 +277,11 @@ export function useTasks(filter: TaskFilter) {
       if (updates.priority !== undefined) body.priority = updates.priority;
       if (Object.keys(body).length === 0) return;
       try {
-        await apiClient.patch(`/tasks/${id}`, body);
         setTasks((prev) =>
           prev.map((t) => (t.id === id ? { ...t, ...updates } : t))
         );
         window.dispatchEvent(new CustomEvent(TASKS_CHANGED_EVENT));
+        await apiClient.patch(`/tasks/${id}`, body);
       } catch (e) {
         console.error("Failed to update task:", e);
         fetchTasks();
