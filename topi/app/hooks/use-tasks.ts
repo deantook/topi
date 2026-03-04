@@ -65,6 +65,10 @@ export type TaskFilter =
   | "abandoned"
   | "trash";
 
+function toLocalDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function filterToQuery(filter: TaskFilter, refDate: Date): Record<string, string> {
   if (typeof filter === "object" && "listId" in filter) {
     return { listId: filter.listId };
@@ -73,30 +77,30 @@ function filterToQuery(filter: TaskFilter, refDate: Date): Record<string, string
   if (filter === "today" || filter === "tomorrow") {
     const d = new Date(refDate);
     if (filter === "tomorrow") d.setDate(d.getDate() + 1);
-    params.date = d.toISOString().slice(0, 10);
+    params.date = toLocalDateStr(d);
   } else if (filter === "recent-seven") {
     const today = new Date(refDate);
     today.setHours(0, 0, 0, 0);
-    const start = today.toISOString().slice(0, 10);
+    const start = toLocalDateStr(today);
     const end = new Date(today);
     end.setDate(end.getDate() + 6);
     params.startDate = start;
-    params.endDate = end.toISOString().slice(0, 10);
+    params.endDate = toLocalDateStr(end);
   }
   return params;
 }
 
 function isoDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  return toLocalDateStr(d);
 }
 
 function isSameDay(a: string | null, b: string): boolean {
-  return a !== null && a === b;
+  return a !== null && a.slice(0, 10) === b;
 }
 
 function isInNext7Days(dateStr: string | null, from: Date): boolean {
   if (!dateStr) return false;
-  const d = new Date(dateStr);
+  const d = new Date(dateStr.replace(" ", "T"));
   const today = new Date(from);
   today.setHours(0, 0, 0, 0);
   const weekEnd = new Date(today);
@@ -256,7 +260,15 @@ export function useTasks(filter: TaskFilter) {
       if (updates.listId !== undefined) body.listId = updates.listId;
       if (updates.dueDate !== undefined) {
         const d = updates.dueDate ?? "";
-        body.dueDate = d && d.length >= 10 ? d.slice(0, 10) : d;
+        body.dueDate = d
+          ? d.includes("T")
+            ? d.replace("T", " ").slice(0, 16) + ":00"
+            : d.length === 10
+              ? d + " 00:00:00"
+              : d.length >= 19
+                ? d.slice(0, 19)
+                : d
+          : "";
       }
       if (updates.priority !== undefined) body.priority = updates.priority;
       if (Object.keys(body).length === 0) return;

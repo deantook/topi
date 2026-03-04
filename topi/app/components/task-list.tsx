@@ -59,14 +59,18 @@ const PRIORITY_CHECKBOX_CLASS: Record<TaskPriority, string> = {
 
 function formatDueDate(dateStr: string | null, refDate = new Date()): string | null {
   if (!dateStr) return null;
-  const today = refDate.toISOString().slice(0, 10);
-  const tomorrow = new Date(refDate);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStr = tomorrow.toISOString().slice(0, 10);
-  if (dateStr === today) return "今天";
-  if (dateStr === tomorrowStr) return "明天";
-  const [y, m, d] = dateStr.split("-");
-  return `${parseInt(m, 10)}月${parseInt(d, 10)}日`;
+  const datePart = dateStr.slice(0, 10);
+  const timePart = dateStr.length >= 19 ? dateStr.slice(11, 16) : null; // HH:mm
+  const toLocalDate = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const today = toLocalDate(refDate);
+  const tomorrow = toLocalDate(new Date(refDate.getTime() + 86400000));
+  if (datePart === today) return timePart ? `今天 ${timePart}` : "今天";
+  if (datePart === tomorrow) return timePart ? `明天 ${timePart}` : "明天";
+  const [y, m, d] = datePart.split("-");
+  return timePart
+    ? `${parseInt(m, 10)}月${parseInt(d, 10)}日 ${timePart}`
+    : `${parseInt(m, 10)}月${parseInt(d, 10)}日`;
 }
 
 export interface TaskListProps {
@@ -119,10 +123,20 @@ export function TaskList({
       } else if (filter === "today" || filter === "tomorrow") {
         const d = new Date();
         if (filter === "tomorrow") d.setDate(d.getDate() + 1);
-        options = { dueDate: d.toISOString().slice(0, 10) };
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        const h = String(d.getHours()).padStart(2, "0");
+        const min = String(d.getMinutes()).padStart(2, "0");
+        options = { dueDate: `${y}-${m}-${day} ${h}:${min}:00` };
       }
       if (addDueDate) {
-        options = { ...options, dueDate: addDueDate };
+        const normalized = addDueDate.includes("T")
+          ? addDueDate.replace("T", " ") + ":00"
+          : addDueDate.length === 10
+            ? addDueDate + " 00:00:00"
+            : addDueDate;
+        options = { ...options, dueDate: normalized };
       }
       if (addPriority !== "none") {
         options = { ...options, priority: addPriority };
@@ -318,11 +332,18 @@ export function TaskList({
         )}
         {editingDueDateId === task.id ? (
           <input
-            type="date"
-            value={task.dueDate ?? ""}
+            type="datetime-local"
+            value={
+              task.dueDate
+                ? task.dueDate.replace(" ", "T").slice(0, 16)
+                : ""
+            }
             onChange={(e) => {
-              const v = e.target.value || null;
-              updateTask(task.id, { dueDate: v });
+              const v = e.target.value;
+              updateTask(
+                task.id,
+                { dueDate: v ? v.replace("T", " ") + ":00" : null }
+              );
               setEditingDueDateId(null);
             }}
             onBlur={() => setEditingDueDateId(null)}
@@ -441,9 +462,23 @@ export function TaskList({
             {filter !== "today" && filter !== "tomorrow" && (
               <>
                 <input
-                  type="date"
-                  value={addDueDate}
-                  onChange={(e) => setAddDueDate(e.target.value)}
+                  type="datetime-local"
+                  value={
+                    addDueDate
+                      ? addDueDate.includes(" ")
+                        ? addDueDate.replace(" ", "T").slice(0, 16)
+                        : addDueDate.length >= 10
+                          ? addDueDate.slice(0, 10) + "T00:00"
+                          : addDueDate
+                      : ""
+                  }
+                  onChange={(e) =>
+                    setAddDueDate(
+                      e.target.value
+                        ? e.target.value.replace("T", " ") + ":00"
+                        : ""
+                    )
+                  }
                   className="h-7 rounded border-0 bg-transparent text-xs text-muted-foreground"
                   title="截止日期"
                   aria-label="截止日期"

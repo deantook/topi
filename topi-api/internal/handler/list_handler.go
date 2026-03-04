@@ -2,10 +2,13 @@ package handler
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/deantook/topi-api/internal/middleware"
+	"github.com/deantook/topi-api/internal/model"
 	"github.com/deantook/topi-api/internal/service"
 	"github.com/deantook/topi-api/pkg/response"
+	"github.com/deantook/topi-api/pkg/timezone"
 	"github.com/gin-gonic/gin"
 )
 
@@ -24,7 +27,28 @@ func (h *ListHandler) List(c *gin.Context) {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
-	response.OK(c, lists)
+	loc := time.UTC
+	if val, exists := c.Get(timezone.ContextKey); exists && val != nil {
+		if l, ok := val.(*time.Location); ok {
+			loc = l
+		}
+	}
+	out := make([]map[string]interface{}, 0, len(lists))
+	for _, l := range lists {
+		out = append(out, formatListForResponse(l, loc))
+	}
+	response.OK(c, out)
+}
+
+func formatListForResponse(l model.List, loc *time.Location) map[string]interface{} {
+	if loc == nil {
+		loc = time.UTC
+	}
+	return map[string]interface{}{
+		"id":         l.ID,
+		"name":       l.Name,
+		"created_at": l.CreatedAt.In(loc).Format(timezone.Layout),
+	}
 }
 
 type CreateListReq struct {
