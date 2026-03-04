@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { Calendar as CalendarIcon, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -37,17 +37,34 @@ function formatDueDateForDisplay(dateStr: string): string {
     : `${parseInt(m, 10)}月${parseInt(d, 10)}日`;
 }
 
+function isInsideAddTaskControl(el: Element | null): boolean {
+  return !!el?.closest("[data-add-task-control]");
+}
+
 export function AddTaskInput({ filter, onSubmit }: AddTaskInputProps) {
   const [input, setInput] = useState("");
   const [addDueDate, setAddDueDate] = useState("");
   const [addPriority, setAddPriority] = useState<TaskPriority>("none");
   const [isFocused, setIsFocused] = useState(false);
   const [datePopoverOpen, setDatePopoverOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const showRightControls =
     isFocused || !!addDueDate || addPriority !== "none";
 
   const hideDatePicker = filter === "today" || filter === "tomorrow";
+
+  const handleBlurCapture = useCallback(() => {
+    setTimeout(() => {
+      const active = document.activeElement;
+      const stillInContainer =
+        containerRef.current?.contains(active as Node) ?? false;
+      const stillInControl = isInsideAddTaskControl(active as Element);
+      if (!stillInContainer && !stillInControl) {
+        setIsFocused(false);
+      }
+    }, 0);
+  }, []);
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -94,13 +111,12 @@ export function AddTaskInput({ filter, onSubmit }: AddTaskInputProps) {
   return (
     <form onSubmit={handleSubmit} className="ml-5">
       <div
+        ref={containerRef}
         className={cn(
           "flex items-center gap-2 rounded-lg border border-gray-200 bg-muted/30 pl-3 pr-3 py-2 dark:border-gray-700"
         )}
         onFocusCapture={() => setIsFocused(true)}
-        onBlurCapture={() => {
-          setTimeout(() => setIsFocused(false), 0);
-        }}
+        onBlurCapture={handleBlurCapture}
       >
         <Plus className="size-4 shrink-0 text-muted-foreground text-[rgba(0,0,0,1)]" />
         <Input
