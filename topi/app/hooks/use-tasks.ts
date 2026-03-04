@@ -254,7 +254,10 @@ export function useTasks(filter: TaskFilter) {
       const body: Record<string, string | null> = {};
       if (updates.title !== undefined) body.title = updates.title;
       if (updates.listId !== undefined) body.listId = updates.listId;
-      if (updates.dueDate !== undefined) body.dueDate = updates.dueDate ?? "";
+      if (updates.dueDate !== undefined) {
+        const d = updates.dueDate ?? "";
+        body.dueDate = d && d.length >= 10 ? d.slice(0, 10) : d;
+      }
       if (updates.priority !== undefined) body.priority = updates.priority;
       if (Object.keys(body).length === 0) return;
       try {

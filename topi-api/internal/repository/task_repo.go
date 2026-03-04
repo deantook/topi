@@ -60,6 +60,15 @@ func (r *TaskRepository) Update(t *model.Task) error {
 	return r.db.Save(t).Error
 }
 
+// UpdateFields updates only the given fields by ID and userID. Use for partial updates
+// so values (e.g. due_date) can be normalized before write.
+func (r *TaskRepository) UpdateFields(id, userID string, fields map[string]interface{}) error {
+	if len(fields) == 0 {
+		return nil
+	}
+	return r.db.Model(&model.Task{}).Where("id = ? AND user_id = ?", id, userID).Updates(fields).Error
+}
+
 func (r *TaskRepository) Delete(id, userID string) error {
 	return r.db.Where("id = ? AND user_id = ?", id, userID).Delete(&model.Task{}).Error
 }

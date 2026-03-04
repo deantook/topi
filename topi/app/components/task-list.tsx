@@ -5,27 +5,32 @@ import {
   Plus,
   GripVertical,
   MoreHorizontal,
-  Pencil,
   Trash2,
   Calendar,
-  ChevronRight,
   Flag,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuLabel,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuLabel,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { Task, TaskFilter, TaskPriority } from "@/hooks/use-tasks";
 import { useTasks } from "@/hooks/use-tasks";
+import { useCustomLists } from "@/hooks/use-custom-lists";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -36,10 +41,20 @@ const PRIORITY_LABEL: Record<TaskPriority, string> = {
   none: "无",
 };
 
-const PRIORITY_FLAG_CLASS: Record<Exclude<TaskPriority, "none">, string> = {
+const PRIORITY_FLAG_CLASS: Record<TaskPriority, string> = {
   high: "text-red-500",
   medium: "text-blue-500",
   low: "text-muted-foreground",
+  none: "text-muted-foreground/50",
+};
+
+const PRIORITY_CHECKBOX_CLASS: Record<TaskPriority, string> = {
+  high:
+    "border-red-500 data-[state=checked]:bg-red-500 data-[state=checked]:border-red-500",
+  medium:
+    "border-blue-500 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500",
+  low: "border-muted-foreground data-[state=checked]:bg-muted-foreground data-[state=checked]:border-muted-foreground",
+  none: "",
 };
 
 function formatDueDate(dateStr: string | null, refDate = new Date()): string | null {
@@ -74,6 +89,13 @@ export function TaskList({
 }: TaskListProps) {
   const { tasks, addTask, toggleTask, updateTask, deleteTask, abandonTask, restoreTask, isLoading } =
     useTasks(filter);
+  const { getList } = useCustomLists();
+
+  const showListName =
+    filter === "all" ||
+    filter === "today" ||
+    filter === "tomorrow" ||
+    filter === "recent-seven";
   const [input, setInput] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
@@ -166,15 +188,86 @@ export function TaskList({
     const isEditing = editingId === task.id;
     const isHovered = hoverId === task.id;
 
+    const contextMenuContent = (
+      <ContextMenuContent className="w-40">
+        {mode === "default" && (
+          <>
+            <ContextMenuItem onClick={() => setEditingDueDateId(task.id)}>
+              <Calendar className="size-4" />
+              截止日期
+            </ContextMenuItem>
+            <div className="px-2 py-1.5">
+              <ContextMenuLabel className="px-0 text-xs text-muted-foreground">
+                优先级
+              </ContextMenuLabel>
+              <div className="mt-1.5 flex gap-1">
+                {(["high", "medium", "low", "none"] as const).map((p) => {
+                  const isSelected = task.priority === p;
+                  return (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => updateTask(task.id, { priority: p })}
+                      className={cn(
+                        "rounded p-1 transition-all hover:bg-accent",
+                        isSelected && "!bg-neutral-200 dark:!bg-neutral-700",
+                        p === "none" && isSelected
+                          ? "text-neutral-500 dark:text-neutral-400"
+                          : PRIORITY_FLAG_CLASS[p]
+                      )}
+                      title={PRIORITY_LABEL[p]}
+                      aria-label={PRIORITY_LABEL[p]}
+                      aria-pressed={isSelected}
+                    >
+                      <Flag
+                        className={cn(
+                          "size-4 transition-transform",
+                          p === "none" && !isSelected && "opacity-50",
+                          isSelected && "scale-110"
+                        )}
+                        fill={p === "none" ? "none" : "currentColor"}
+                        strokeWidth={isSelected ? 2 : 1.5}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </>
+        )}
+        {(mode === "completed" || mode === "abandoned" || mode === "trash") && (
+          <ContextMenuItem onClick={() => restoreTask(task.id)}>
+            恢复
+          </ContextMenuItem>
+        )}
+        <ContextMenuSeparator />
+        <ContextMenuItem
+          onClick={() => handleDelete(task.id)}
+          variant="destructive"
+        >
+          <Trash2 className="size-4" />
+          {mode === "trash" ? "永久删除" : "删除"}
+        </ContextMenuItem>
+        {mode === "default" && (
+          <ContextMenuItem onClick={() => abandonTask(task.id)}>
+            放弃
+          </ContextMenuItem>
+        )}
+      </ContextMenuContent>
+    );
+
     return (
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
       <div
         key={task.id}
         className={cn(
-          "group flex items-center gap-2 rounded-md px-2 py-2 transition-colors",
+          "group flex items-center gap-2 rounded-md px-2 py-2 transition-colors cursor-text",
           isHovered && "bg-muted/50"
         )}
         onMouseEnter={() => setHoverId(task.id)}
         onMouseLeave={() => setHoverId(null)}
+        onDoubleClick={() => mode === "default" && !task.completed && handleEditStart(task)}
       >
         {mode === "default" && (
           <GripVertical
@@ -186,6 +279,7 @@ export function TaskList({
           checked={task.completed || mode !== "default"}
           onCheckedChange={() => handleToggle(task)}
           aria-label={task.title}
+          className={mode === "default" ? PRIORITY_CHECKBOX_CLASS[task.priority] : undefined}
         />
         {isEditing ? (
           <form onSubmit={handleEditSubmit} className="flex-1">
@@ -204,23 +298,21 @@ export function TaskList({
               "min-w-0 flex-1 truncate",
               task.completed && "text-muted-foreground line-through"
             )}
-            onDoubleClick={() => handleEditStart(task)}
           >
             {task.title}
           </span>
         )}
         {mode === "default" && (
           <>
+            {showListName && task.listId && (
+              <span className="shrink-0 rounded px-1.5 py-0.5 text-xs text-muted-foreground bg-muted/50">
+                {getList(task.listId)?.name ?? "·"}
+              </span>
+            )}
             {task.dueDate && !editingDueDateId && (
               <span className="shrink-0 rounded px-1.5 py-0.5 text-xs text-muted-foreground bg-muted/60">
                 {formatDueDate(task.dueDate)}
               </span>
-            )}
-            {task.priority !== "none" && (
-              <Flag
-                className={cn("size-3.5 shrink-0", PRIORITY_FLAG_CLASS[task.priority])}
-                aria-label={PRIORITY_LABEL[task.priority]}
-              />
             )}
           </>
         )}
@@ -255,43 +347,47 @@ export function TaskList({
           <DropdownMenuContent align="end" className="w-40">
             {mode === "default" && (
               <>
-                <DropdownMenuItem onClick={() => handleEditStart(task)}>
-                  <Pencil className="size-4" />
-                  编辑
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setEditingDueDateId(task.id)}>
                   <Calendar className="size-4" />
                   截止日期
                 </DropdownMenuItem>
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger>
-                    <Flag className="size-4" />
+                <div className="px-2 py-1.5">
+                  <DropdownMenuLabel className="px-0 text-xs text-muted-foreground">
                     优先级
-                    <ChevronRight className="ml-auto size-4" />
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent>
-                    {(["high", "medium", "low", "none"] as const).map((p) => (
-                      <DropdownMenuItem
-                        key={p}
-                        onClick={() => updateTask(task.id, { priority: p })}
-                      >
-                        {p !== "none" ? (
-                          <span
+                  </DropdownMenuLabel>
+                  <div className="mt-1.5 flex gap-1">
+                    {(["high", "medium", "low", "none"] as const).map((p) => {
+                      const isSelected = task.priority === p;
+                      return (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() => updateTask(task.id, { priority: p })}
+                          className={cn(
+                            "rounded p-1 transition-all hover:bg-accent",
+                            isSelected && "!bg-neutral-200 dark:!bg-neutral-700",
+                            p === "none" && isSelected
+                              ? "text-neutral-500 dark:text-neutral-400"
+                              : PRIORITY_FLAG_CLASS[p]
+                          )}
+                          title={PRIORITY_LABEL[p]}
+                          aria-label={PRIORITY_LABEL[p]}
+                          aria-pressed={isSelected}
+                        >
+                          <Flag
                             className={cn(
-                              "size-2 rounded-full",
-                              p === "high" && "bg-red-500",
-                              p === "medium" && "bg-blue-500",
-                              p === "low" && "bg-muted-foreground"
+                              "size-4 transition-transform",
+                              p === "none" && !isSelected && "opacity-50",
+                              isSelected && "scale-110"
                             )}
+                            fill={p === "none" ? "none" : "currentColor"}
+                            strokeWidth={isSelected ? 2 : 1.5}
                           />
-                        ) : (
-                          <span className="size-2" />
-                        )}
-                        {PRIORITY_LABEL[p]}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </>
             )}
             {(mode === "completed" || mode === "abandoned" || mode === "trash") && (
@@ -315,6 +411,9 @@ export function TaskList({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+        </ContextMenuTrigger>
+        {contextMenuContent}
+      </ContextMenu>
     );
   };
 

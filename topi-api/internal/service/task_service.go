@@ -2,11 +2,21 @@ package service
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/deantook/topi-api/internal/model"
 	"github.com/deantook/topi-api/internal/repository"
 	"gorm.io/gorm"
 )
+
+// normalizeDateString ensures YYYY-MM-DD for MySQL DATE column (rejects ISO datetimes).
+func normalizeDateString(s string) string {
+	s = strings.TrimSpace(s)
+	if len(s) >= 10 && s[4] == '-' && s[7] == '-' {
+		return s[:10]
+	}
+	return s
+}
 
 var ErrTaskNotFound = errors.New("task not found")
 
@@ -33,11 +43,16 @@ func (s *TaskService) Create(userID string, title string, listID *string, dueDat
 			prio = model.TaskPriority(*priority)
 		}
 	}
+	var normalizedDue *string
+	if dueDate != nil && *dueDate != "" {
+		d := normalizeDateString(*dueDate)
+		normalizedDue = &d
+	}
 	t := &model.Task{
 		UserID:   userID,
 		Title:    title,
 		ListID:   listID,
-		DueDate:  dueDate,
+		DueDate:  normalizedDue,
 		Priority: prio,
 		Status:   model.TaskStatusActive,
 		Order:    maxOrder + 1,
@@ -86,33 +101,33 @@ func (s *TaskService) List(userID, filter string, listID *string, date, startDat
 }
 
 func (s *TaskService) Update(userID, id string, title *string, listID *string, dueDate *string, priority *string) error {
-	t, err := s.repo.GetByIDAndUserID(id, userID)
-	if err != nil {
+	if _, err := s.repo.GetByIDAndUserID(id, userID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return ErrTaskNotFound
 		}
 		return err
 	}
+	fields := make(map[string]interface{})
 	if title != nil {
-		t.Title = *title
+		fields["title"] = *title
 	}
 	if listID != nil {
-		t.ListID = listID
+		fields["list_id"] = listID
 	}
 	if dueDate != nil {
 		if *dueDate == "" {
-			t.DueDate = nil
+			fields["due_date"] = nil
 		} else {
-			t.DueDate = dueDate
+			fields["due_date"] = normalizeDateString(*dueDate)
 		}
 	}
 	if priority != nil {
 		switch *priority {
 		case "none", "low", "medium", "high":
-			t.Priority = model.TaskPriority(*priority)
+			fields["priority"] = model.TaskPriority(*priority)
 		}
 	}
-	return s.repo.Update(t)
+	return s.repo.UpdateFields(id, userID, fields)
 }
 
 func (s *TaskService) Toggle(userID, id string) error {

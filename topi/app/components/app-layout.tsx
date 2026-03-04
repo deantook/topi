@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import { logout } from "@/lib/auth";
 import { CustomListsSidebar } from "@/components/custom-lists-sidebar";
-import { useCustomLists } from "@/hooks/use-custom-lists";
 import {
   Sidebar,
   SidebarContent,
@@ -48,18 +47,8 @@ const footerItems = [
   { to: "/settings", label: "设置", icon: Settings, title: "设置" },
 ];
 
-const allItems = [...navItems, ...bottomNavItems, ...footerItems];
-
-function getPageTitle(pathname: string) {
-  return allItems.find((item) => item.to === pathname)?.title ?? "主页";
-}
-
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
-  const { getList } = useCustomLists();
-  const listMatch = location.pathname.match(/^\/list\/([^/]+)$/);
-  const listName = listMatch ? getList(listMatch[1])?.name : null;
-  const pageTitle = listName ?? getPageTitle(location.pathname);
 
   return (
     <SidebarProvider>
@@ -138,17 +127,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <header className="flex h-14 shrink-0 items-center gap-3 border-b px-4">
+        <div className="flex flex-1 overflow-auto gap-2 p-4 md:p-6">
           <SidebarTrigger
-            className="-ml-1"
+            className="-ml-1 shrink-0 self-start"
             aria-label="最小化侧边栏"
             title="最小化侧边栏 (⌘B)"
           >
             <Menu className="size-4" />
           </SidebarTrigger>
-          <h1 className="text-lg font-semibold">{pageTitle}</h1>
-        </header>
-        <div className="flex-1 overflow-auto p-4 md:p-6">{children}</div>
+          <div className="min-w-0 flex-1">{children}</div>
+        </div>
       </SidebarInset>
     </SidebarProvider>
   );
