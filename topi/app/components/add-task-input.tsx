@@ -10,10 +10,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  DateTimePickerPopover,
-  formatDueDateForDisplay,
-} from "@/components/datetime-picker";
+import { DateTimePickerPopover } from "@/components/datetime-picker";
+import { formatDueDateForDisplay } from "@/lib/date-utils";
 import type { TaskFilter, TaskPriority } from "@/hooks/use-tasks";
 import { PRIORITY_LABEL, PRIORITY_FLAG_CLASS } from "@/lib/task-constants";
 import { cn } from "@/lib/utils";

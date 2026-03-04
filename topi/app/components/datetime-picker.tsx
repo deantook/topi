@@ -9,21 +9,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-
-const HH_MM_REGEX = /^([01]?\d|2[0-3]):([0-5]\d)$/;
-
-function isValidTime(value: string): boolean {
-  return HH_MM_REGEX.test(value) || value === "";
-}
-
-export function formatDueDateForDisplay(dateStr: string): string {
-  if (!dateStr || dateStr.length < 10) return "";
-  const [y, m, d] = dateStr.slice(0, 10).split("-");
-  const timePart = dateStr.length >= 19 ? dateStr.slice(11, 16) : null;
-  return timePart
-    ? `${parseInt(m, 10)}月${parseInt(d, 10)}日 ${timePart}`
-    : `${parseInt(m, 10)}月${parseInt(d, 10)}日`;
-}
+import { isValidTime } from "@/lib/date-utils";
 
 function toDateString(d: Date): string {
   const y = d.getFullYear();
@@ -111,10 +97,11 @@ export function DateTimePicker({
         </Button>
       </div>
 
-      <Calendar
-        mode="single"
-        selected={datePart ? new Date(datePart + "T12:00:00") : undefined}
-        onSelect={(date: Date | undefined) => {
+      <div role="group" aria-label="选择日期">
+        <Calendar
+          mode="single"
+          selected={datePart ? new Date(datePart + "T12:00:00") : undefined}
+          onSelect={(date: Date | undefined) => {
           if (!date) return;
           const ds = toDateString(date);
           const time =
@@ -123,7 +110,8 @@ export function DateTimePicker({
               : "00:00";
           onChange(`${ds} ${time}:00`);
         }}
-      />
+        />
+      </div>
 
       <div className="flex items-center gap-2 border-t pt-2">
         <input
