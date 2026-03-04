@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import { Calendar as CalendarIcon, Flag, Plus } from "lucide-react";
+import { CalendarClock, Flag, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -131,29 +131,31 @@ export function AddTaskInput({ filter, onSubmit }: AddTaskInputProps) {
           placeholder="添加任务"
           className="h-8 flex-1 min-w-0 border-0 bg-transparent px-0 shadow-none text-[rgba(143,146,168,1)] placeholder:text-muted-foreground focus-visible:ring-0"
         />
-        {showRightControls && !hideDatePicker && (
+        {showRightControls && (
+          <div className="flex items-center gap-2 shrink-0">
+        {!hideDatePicker && (
           <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
             <PopoverTrigger asChild>
               <Button
                 variant="ghost"
-                size="icon-xs"
+                size={addDueDate ? "xs" : "icon-sm"}
                 aria-label="截止日期"
-                className="shrink-0 text-muted-foreground"
+                className="shrink-0 text-muted-foreground gap-1.5"
               >
                 {addDueDate ? (
                   <>
-                    <span className="text-xs">
+                    <span className="text-xs whitespace-nowrap">
                       {formatDueDateForDisplay(addDueDate)}
                     </span>
-                    <CalendarIcon className="size-3" />
+                    <CalendarClock className="size-4 shrink-0" />
                   </>
                 ) : (
-                  <CalendarIcon className="size-3" />
+                  <CalendarClock className="size-4" />
                 )}
               </Button>
             </PopoverTrigger>
-            <PopoverContent data-add-task-control align="start" className="w-auto p-0">
-              <div className="flex flex-col gap-2 p-2">
+            <PopoverContent data-add-task-control align="start" className="w-auto p-0 !bg-white dark:!bg-background">
+              <div className="flex flex-col gap-2 p-2 !bg-white dark:!bg-background">
                 <Calendar
                   mode="single"
                   selected={
@@ -175,25 +177,31 @@ export function AddTaskInput({ filter, onSubmit }: AddTaskInputProps) {
                   }}
                 />
                 <div className="flex items-center gap-2 border-t pt-2">
-                  <Input
-                    type="text"
-                    placeholder="00:00"
+                  <input
+                    type="time"
                     value={
                       addDueDate && addDueDate.length >= 16
                         ? addDueDate.slice(11, 16)
-                        : ""
+                        : "00:00"
                     }
                     onChange={(e) => {
                       const v = e.target.value;
                       const datePart = addDueDate ? addDueDate.slice(0, 10) : null;
-                      if (v === "") {
-                        if (datePart) setAddDueDate(`${datePart} 00:00:00`);
-                        return;
-                      }
-                      if (!isValidTime(v) || !datePart) return;
-                      setAddDueDate(`${datePart} ${v}:00`);
+                      const fallbackDate = () => {
+                        const d = new Date();
+                        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+                      };
+                      const useDate = datePart ?? fallbackDate();
+                      setAddDueDate(`${useDate} ${v}:00`);
                     }}
-                    className="h-8 w-20"
+                    onFocus={() => {
+                      if (!addDueDate) {
+                        const d = new Date();
+                        const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+                        setAddDueDate(`${ds} 00:00:00`);
+                      }
+                    }}
+                    className="h-8 w-20 min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm dark:bg-input/30"
                   />
                   <Button
                     variant="ghost"
@@ -210,7 +218,6 @@ export function AddTaskInput({ filter, onSubmit }: AddTaskInputProps) {
             </PopoverContent>
           </Popover>
         )}
-        {showRightControls && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -274,6 +281,7 @@ export function AddTaskInput({ filter, onSubmit }: AddTaskInputProps) {
               </div>
             </DropdownMenuContent>
           </DropdownMenu>
+          </div>
         )}
       </div>
     </form>
