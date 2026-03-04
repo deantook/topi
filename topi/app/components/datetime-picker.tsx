@@ -15,6 +15,7 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
+import { cn } from "@/lib/utils";
 import { isValidTime } from "@/lib/date-utils";
 
 function toDateString(d: Date): string {
@@ -66,7 +67,7 @@ export function DateTimePicker({
   };
 
   return (
-    <div className="flex flex-col gap-2 p-2 bg-white dark:bg-neutral-900">
+    <div className="flex flex-col gap-2 rounded-md p-2 bg-white dark:bg-neutral-900">
       <div className="flex items-center gap-1.5">
         <Button
           type="button"
@@ -191,6 +192,8 @@ export function DateTimePickerPopover({
     </Button>
   );
 
+  const { className: contentClassName, ...restContentProps } = contentProps ?? {};
+
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>
@@ -199,8 +202,11 @@ export function DateTimePickerPopover({
       <PopoverContent
         align="end"
         avoidCollisions={false}
-        className="w-auto p-0 !bg-white dark:!bg-neutral-900"
-        {...contentProps}
+        className={cn(
+          "w-auto overflow-hidden rounded-md border p-0 !bg-white dark:!bg-neutral-900",
+          contentClassName
+        )}
+        {...restContentProps}
       >
         <DateTimePicker
           value={value}
