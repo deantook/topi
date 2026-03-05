@@ -74,6 +74,10 @@ type CreateTaskReq struct {
 	Priority *string  `json:"priority"`
 }
 
+type CreateTasksBatchReq struct {
+	Tasks []CreateTaskReq `json:"tasks"`
+}
+
 func (h *TaskHandler) Create(c *gin.Context) {
 	userID := c.GetString(middleware.UserIDKey)
 	var req CreateTaskReq
@@ -93,6 +97,44 @@ func (h *TaskHandler) Create(c *gin.Context) {
 		return
 	}
 	out := formatTaskForResponse(*t, loc)
+	response.OK(c, out)
+}
+
+func (h *TaskHandler) CreateBatch(c *gin.Context) {
+	userID := c.GetString(middleware.UserIDKey)
+	var req CreateTasksBatchReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	if len(req.Tasks) == 0 {
+		response.Error(c, http.StatusBadRequest, "tasks array must not be empty")
+		return
+	}
+	inputs := make([]service.BatchTaskInput, len(req.Tasks))
+	for i, t := range req.Tasks {
+		inputs[i] = service.BatchTaskInput{
+			Title:    t.Title,
+			ListID:   t.ListID,
+			DueDate:  t.DueDate,
+			Priority: t.Priority,
+		}
+	}
+	var loc *time.Location
+	if val, exists := c.Get(timezone.ContextKey); exists && val != nil {
+		if l, ok := val.(*time.Location); ok {
+			loc = l
+		}
+	}
+	tasks, err := h.svc.BatchCreate(userID, inputs, loc)
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	out := make([]map[string]interface{}, 0, len(tasks))
+	for _, t := range tasks {
+		out = append(out, formatTaskForResponse(*t, loc))
+	}
 	response.OK(c, out)
 }
 

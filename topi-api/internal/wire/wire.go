@@ -86,7 +86,8 @@ func provideRouter(
 		{
 			auth.GET("/tasks", taskH.List)
 			auth.POST("/tasks", taskH.Create)
-			// CRITICAL: POST /tasks/reorder BEFORE /tasks/:id to avoid id=reorder
+			// CRITICAL: POST /tasks/batch and /tasks/reorder BEFORE /tasks/:id to avoid id matching
+			auth.POST("/tasks/batch", taskH.CreateBatch)
 			auth.POST("/tasks/reorder", taskH.Reorder)
 			auth.PATCH("/tasks/:id", taskH.Update)
 			auth.POST("/tasks/:id/toggle", taskH.Toggle)
