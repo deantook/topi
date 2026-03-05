@@ -53,6 +53,7 @@ func (h *TaskHandlers) ListTasks(ctx context.Context, req mcp.CallToolRequest) (
 			"priority":  t.Priority,
 			"status":    t.Status,
 			"detail":    t.Detail,
+			"owner":     t.Owner,
 		})
 	}
 	b, _ := json.Marshal(out)
@@ -113,7 +114,6 @@ func (h *TaskHandlers) CreateTasks(ctx context.Context, req mcp.CallToolRequest)
 		}
 		inputs = append(inputs, inp)
 	}
-	// Task 5 will wire MCP with model.TaskOwnerAgentPtr(); for now use agent as default for MCP
 	created, err := h.TaskSvc.BatchCreate(userID, inputs, model.TaskOwnerAgentPtr(), time.UTC)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
@@ -154,8 +154,11 @@ func (h *TaskHandlers) CreateTask(ctx context.Context, req mcp.CallToolRequest) 
 	if detail != "" {
 		dpDetail = &detail
 	}
-	// Task 5 will wire MCP with &model.TaskOwnerAgent; for now use nil (service defaults to human)
-	task, err := h.TaskSvc.Create(userID, title, lp, dp, &priority, dpDetail, nil, time.UTC)
+	owner := model.TaskOwnerAgentPtr()
+	if v := req.GetString("owner", ""); v == "human" {
+		owner = model.TaskOwnerHumanPtr()
+	}
+	task, err := h.TaskSvc.Create(userID, title, lp, dp, &priority, dpDetail, owner, time.UTC)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
@@ -199,7 +202,6 @@ func (h *TaskHandlers) UpdateTask(ctx context.Context, req mcp.CallToolRequest) 
 		v := req.GetString("owner", "")
 		owner = &v
 	}
-	// Task 5 will wire MCP owner from request; for now pass owner (nil if not in args)
 	if err := h.TaskSvc.Update(userID, id, title, listID, dueDate, priority, detail, owner, time.UTC); err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
