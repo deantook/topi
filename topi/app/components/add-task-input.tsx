@@ -100,17 +100,17 @@ export function AddTaskInput({ filter, onSubmit }: AddTaskInputProps) {
       <div
         ref={containerRef}
         className={cn(
-          "flex items-center gap-2 rounded-lg border border-gray-200 bg-muted/30 pl-3 pr-3 py-2 dark:border-gray-700"
+          "flex items-center gap-2 rounded-lg border border-border bg-background pl-3 pr-3 py-2"
         )}
         onFocusCapture={() => setIsFocused(true)}
         onBlurCapture={handleBlurCapture}
       >
-        <Plus className="size-4 shrink-0 text-muted-foreground text-[rgba(0,0,0,1)]" />
+        <Plus className="size-4 shrink-0 text-muted-foreground" />
         <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="添加任务"
-          className="h-8 flex-1 min-w-0 border-0 bg-transparent px-0 shadow-none text-[rgba(143,146,168,1)] placeholder:text-muted-foreground focus-visible:ring-0"
+          className="h-8 flex-1 min-w-0 border-0 bg-transparent px-2 shadow-none text-foreground placeholder:text-muted-foreground focus-visible:ring-0"
         />
         {showRightControls && (
           <div className="flex items-center gap-2 shrink-0">

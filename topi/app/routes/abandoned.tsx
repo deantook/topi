@@ -3,7 +3,7 @@ import { TaskList } from "@/components/task-list";
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "已放弃" },
+    { title: "待办清单" },
     { name: "description", content: "已放弃的任务" },
   ];
 }

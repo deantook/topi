@@ -29,6 +29,7 @@ import {
   SidebarTrigger,
   SidebarInset,
 } from "@/components/ui/sidebar";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { useTaskCounts } from "@/hooks/use-tasks";
 
 const navItems = [
@@ -57,7 +58,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     <SidebarProvider>
       <Sidebar side="left" collapsible="icon">
         <SidebarContent>
-          <SidebarGroup>
+          <SidebarGroup className="pt-6">
             <SidebarGroupContent>
               <SidebarMenu>
                 {navItems.map((item) => {
@@ -125,6 +126,9 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
+            <SidebarMenuItem>
+              <ThemeToggle />
+            </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton
                 onClick={() => logout()}

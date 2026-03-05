@@ -1,6 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Link, useSearchParams } from "react-router";
+import type { Route } from "./+types/login";
 import { z } from "zod/v3";
 
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,10 @@ const loginSchema = z.object({
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
+
+export function meta({}: Route.MetaArgs) {
+  return [{ title: "待办清单" }];
+}
 
 export default function Login() {
   const [searchParams] = useSearchParams();

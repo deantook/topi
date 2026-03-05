@@ -3,7 +3,7 @@ import { TaskList } from "@/components/task-list";
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "最近七天" },
+    { title: "待办清单" },
     { name: "description", content: "最近七天的任务" },
   ];
 }

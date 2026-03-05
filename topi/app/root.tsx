@@ -8,7 +8,22 @@ import {
 } from "react-router";
 
 import type { Route } from "./+types/root";
+import { ThemeProvider } from "@/components/theme-provider";
 import "./app.css";
+
+const themeScript = `
+(function() {
+  const k = 'topi-theme';
+  const v = localStorage.getItem(k);
+  const dark = v === 'dark' || (v !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.classList.toggle('dark', dark);
+  document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+})();
+`;
+
+export function meta() {
+  return [{ title: "待办清单" }];
+}
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -25,17 +40,20 @@ export const links: Route.LinksFunction = () => [
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <Meta />
         <Links />
       </head>
       <body>
-        {children}
-        <ScrollRestoration />
-        <Scripts />
+        <ThemeProvider>
+          {children}
+          <ScrollRestoration />
+          <Scripts />
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   DndContext,
   PointerSensor,
@@ -260,6 +260,8 @@ export interface TaskListProps {
   mode?: "default" | "completed" | "abandoned" | "trash";
 }
 
+const SKELETON_DELAY_MS = 200;
+
 export function TaskList({
   title,
   filter,
@@ -269,6 +271,15 @@ export function TaskList({
 }: TaskListProps) {
   const { tasks, addTask, toggleTask, updateTask, deleteTask, abandonTask, restoreTask, reorderTasks, isLoading } =
     useTasks(filter);
+  const [showSkeleton, setShowSkeleton] = useState(false);
+  useEffect(() => {
+    if (!isLoading) {
+      setShowSkeleton(false);
+      return;
+    }
+    const t = setTimeout(() => setShowSkeleton(true), SKELETON_DELAY_MS);
+    return () => clearTimeout(t);
+  }, [isLoading]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -511,7 +522,7 @@ export function TaskList({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-2 pl-7">
         <h2 className="text-lg font-semibold">{title}</h2>
         {showSort && (
           <Button variant="ghost" size="icon-sm" aria-label="排序">
@@ -528,7 +539,7 @@ export function TaskList({
       )}
 
       <div className="flex flex-col">
-        {isLoading ? (
+        {showSkeleton ? (
           <>
             <Skeleton className="h-10 w-full rounded-none" />
             <Skeleton className="h-10 w-full rounded-none" />
