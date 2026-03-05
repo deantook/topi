@@ -24,8 +24,10 @@ export function TaskPageWithDetail({
 }: TaskPageWithDetailProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedId = searchParams.get("selected");
+  const ownerParam = searchParams.get("owner");
+  const owner = ownerParam === "human" || ownerParam === "agent" ? ownerParam : undefined;
 
-  const tasksHook = useTasks(filter);
+  const tasksHook = useTasks(filter, { owner });
   const { tasks, updateTask } = tasksHook;
   const selectedTask = selectedId ? tasks.find((t) => t.id === selectedId) ?? null : null;
 

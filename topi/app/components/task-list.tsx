@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router";
 import {
   DndContext,
   PointerSensor,
@@ -310,6 +311,12 @@ export interface TaskListProps {
 
 const SKELETON_DELAY_MS = 200;
 
+const OWNER_FILTER_OPTIONS: { value: string | null; label: string }[] = [
+  { value: null, label: "全部" },
+  { value: "human", label: "我" },
+  { value: "agent", label: "Agent" },
+];
+
 export function TaskList({
   title,
   filter,
@@ -320,7 +327,12 @@ export function TaskList({
   onSelectTask,
   tasksSource,
 }: TaskListProps) {
-  const fallback = useTasks(filter);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const ownerParam = searchParams.get("owner");
+  const currentOwner = ownerParam === "human" || ownerParam === "agent" ? ownerParam : null;
+  const ownerForQuery = currentOwner ?? undefined;
+
+  const fallback = useTasks(filter, { owner: ownerForQuery });
   const { tasks, addTask, toggleTask, updateTask, deleteTask, abandonTask, restoreTask, reorderTasks, isLoading } =
     tasksSource ?? fallback;
   const [showSkeleton, setShowSkeleton] = useState(false);
@@ -620,10 +632,49 @@ export function TaskList({
     );
   };
 
+  const setOwnerFilter = useCallback(
+    (value: string | null) => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        if (value === null) {
+          next.delete("owner");
+        } else {
+          next.set("owner", value);
+        }
+        return next;
+      });
+    },
+    [setSearchParams]
+  );
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-2 pl-7">
-        <h2 className="text-lg font-semibold">{title}</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold">{title}</h2>
+          {mode === "default" && (
+            <div className="flex rounded-md border border-input bg-muted/30 p-0.5" role="tablist" aria-label="按创建者筛选">
+              {OWNER_FILTER_OPTIONS.map(({ value, label }) => {
+                const isActive = currentOwner === value;
+                return (
+                  <button
+                    key={value ?? "all"}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    onClick={() => setOwnerFilter(value)}
+                    className={cn(
+                      "rounded px-2 py-0.5 text-xs font-medium transition-colors",
+                      isActive ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
         {showSort && (
           <Button variant="ghost" size="icon-sm" aria-label="排序">
             <span className="text-xs">1↓</span>
