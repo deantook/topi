@@ -1,9 +1,23 @@
 ---
 name: topi-mcp-tasks
-description: Use Topi MCP tools for task management when user asks to add, list, update, complete, or manage todo tasks. Triggers on phrases like "记下来"、"加到待办"、"今天有什么任务"、"完成这个任务".
+description: Use Topi MCP tools when user manages todo tasks. Triggers: 记下来/加到待办/帮我记一下/添加任务、今天有什么任务/明天要做什么/收件箱里有什么、完成/标记完成、放弃/删除/移到回收站、创建列表/列出我的任务、改标题/改日期/调优先级/排序。
 ---
 
 # Topi MCP Tasks
+
+## 使用场景 / 触发词
+
+| 场景 | 示例表达 |
+|------|----------|
+| **添加** | 记下来、加到待办、帮我记一下、添加任务、把 X 列入计划、提醒我 X、别忘了 X、写进 todo |
+| **批量添加** | 把这几项都加上、这些都记下来、批量创建 |
+| **查看** | 今天有什么任务、明天要做什么、收件箱里有什么、看看我的待办、列出所有任务、本周任务、已完成的有哪些 |
+| **完成** | 完成这个任务、标记为已完成、勾掉、打勾 |
+| **更新** | 改下标题、移到明天、换个日期、设个优先级 |
+| **放弃/删除** | 放弃、删掉、移到回收站、不要了 |
+| **恢复** | 恢复这个任务、从回收站捞回来 |
+| **列表** | 创建新列表、我有哪些列表、把这个加到 X 列表 |
+| **排序** | 排下顺序、把这个挪到第一位 |
 
 ## 归属人 (owner)
 
@@ -36,6 +50,7 @@ description: Use Topi MCP tools for task management when user asks to add, list,
 | 完成任务 | `topi_toggle_task` | 按 id 切换 |
 | 更新任务 | `topi_update_task` | 需任务 id |
 | 放弃/删除/恢复任务 | `topi_abandon_task` / `topi_trash_task` / `topi_restore_task` | 按 id |
+| 重排序 | `topi_reorder_tasks` | `id` + `newIndex`（0-based） |
 | 创建/列出列表 | `topi_create_list` / `topi_list_lists` | — |
 
 ## 核心工作流
