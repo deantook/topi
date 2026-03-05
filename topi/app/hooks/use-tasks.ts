@@ -17,6 +17,7 @@ export interface Task {
   status: TaskStatus;
   order: number;
   createdAt: string; // ISO string
+  owner: "human" | "agent" | null;
 }
 
 /** API response task (snake_case) */
@@ -31,6 +32,7 @@ interface ApiTask {
   status: TaskStatus;
   sort_order: number;
   created_at: string;
+  owner?: string | null;
 }
 
 const PRIORITY_ORDER: Record<TaskPriority, number> = {
@@ -44,6 +46,9 @@ function mapTask(r: ApiTask): Task {
   const p = r.priority as TaskPriority | undefined;
   const priority: TaskPriority =
     p === "none" || p === "low" || p === "medium" || p === "high" ? p : "none";
+  const rawOwner = r.owner;
+  const owner: "human" | "agent" | null =
+    rawOwner === "human" || rawOwner === "agent" ? rawOwner : null;
   return {
     id: r.id,
     title: r.title,
@@ -55,6 +60,7 @@ function mapTask(r: ApiTask): Task {
     status: r.status,
     order: r.sort_order ?? 0,
     createdAt: r.created_at,
+    owner,
   };
 }
 
@@ -73,24 +79,31 @@ function toLocalDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function filterToQuery(filter: TaskFilter, refDate: Date): Record<string, string> {
+function filterToQuery(
+  filter: TaskFilter,
+  refDate: Date,
+  owner?: string
+): Record<string, string> {
+  let params: Record<string, string>;
   if (typeof filter === "object" && "listId" in filter) {
-    return { listId: filter.listId };
+    params = { listId: filter.listId };
+  } else {
+    params = { filter: String(filter) };
+    if (filter === "today" || filter === "tomorrow") {
+      const d = new Date(refDate);
+      if (filter === "tomorrow") d.setDate(d.getDate() + 1);
+      params.date = toLocalDateStr(d);
+    } else if (filter === "recent-seven") {
+      const today = new Date(refDate);
+      today.setHours(0, 0, 0, 0);
+      const start = toLocalDateStr(today);
+      const end = new Date(today);
+      end.setDate(end.getDate() + 6);
+      params.startDate = start;
+      params.endDate = toLocalDateStr(end);
+    }
   }
-  const params: Record<string, string> = { filter: String(filter) };
-  if (filter === "today" || filter === "tomorrow") {
-    const d = new Date(refDate);
-    if (filter === "tomorrow") d.setDate(d.getDate() + 1);
-    params.date = toLocalDateStr(d);
-  } else if (filter === "recent-seven") {
-    const today = new Date(refDate);
-    today.setHours(0, 0, 0, 0);
-    const start = toLocalDateStr(today);
-    const end = new Date(today);
-    end.setDate(end.getDate() + 6);
-    params.startDate = start;
-    params.endDate = toLocalDateStr(end);
-  }
+  if (owner === "human" || owner === "agent") params.owner = owner;
   return params;
 }
 
@@ -170,18 +183,19 @@ function filterTasks(tasks: Task[], filter: TaskFilter, refDate: Date): Task[] {
   );
 }
 
-export function useTasks(filter: TaskFilter) {
+export function useTasks(filter: TaskFilter, options?: { owner?: string }) {
   const queryClient = useQueryClient();
 
   const filterKey =
     typeof filter === "object" && filter !== null && "listId" in filter
       ? `list:${filter.listId}`
       : String(filter);
+  const ownerKey = options?.owner ?? "";
 
   const { data: tasks = [], isLoading } = useQuery({
-    queryKey: ["tasks", filterKey],
+    queryKey: ["tasks", filterKey, ownerKey],
     queryFn: async () => {
-      const params = filterToQuery(filter, new Date());
+      const params = filterToQuery(filter, new Date(), options?.owner);
       const query = new URLSearchParams(params).toString();
       const path = query ? `/tasks?${query}` : "/tasks";
       const res = (await apiClient.get(path)) as { data: ApiTask[] };
@@ -206,8 +220,10 @@ export function useTasks(filter: TaskFilter) {
         listId?: string;
         dueDate?: string;
         priority?: string;
+        owner: "human";
       } = {
         title: title.trim() || "新任务",
+        owner: "human",
       };
       if (options?.listId) body.listId = options.listId;
       if (options?.dueDate) body.dueDate = options.dueDate;
@@ -242,7 +258,9 @@ export function useTasks(filter: TaskFilter) {
   const updateTask = useCallback(
     async (
       id: string,
-      updates: Partial<Pick<Task, "title" | "dueDate" | "listId" | "priority" | "detail">>
+      updates: Partial<
+        Pick<Task, "title" | "dueDate" | "listId" | "priority" | "detail" | "owner">
+      >
     ) => {
       const body: Record<string, string | null> = {};
       if (updates.title !== undefined) body.title = updates.title;
@@ -261,6 +279,7 @@ export function useTasks(filter: TaskFilter) {
           : "";
       }
       if (updates.priority !== undefined) body.priority = updates.priority;
+      if (updates.owner !== undefined) body.owner = updates.owner;
       if (Object.keys(body).length === 0) return;
       try {
         await apiClient.patch(`/tasks/${id}`, body);
