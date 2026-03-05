@@ -32,10 +32,10 @@ function TaskDetailContent({
 }) {
   return (
     <>
-      <CardHeader className="pb-2">
+      <CardHeader className="shrink-0 pb-2">
         <CardTitle className="text-base">{task.title}</CardTitle>
       </CardHeader>
-      <CardContent className="pt-0">
+      <CardContent className="flex min-h-0 flex-1 flex-col overflow-auto pt-0">
         <Suspense fallback={<div className="min-h-[200px] animate-pulse rounded-md bg-muted/20" />}>
           <TaskDetailEditor
             value={task.detail ?? ""}
@@ -86,11 +86,11 @@ export function TaskDetailPanel({ taskId, task, onClose, onSaveDetail }: TaskDet
   }
 
   return (
-    <div className="flex w-[360px] shrink-0 flex-col">
+    <div className="flex min-w-0 flex-1 flex-col">
       {taskId == null ? (
         <EmptyState />
       ) : task ? (
-        <Card>
+        <Card className="flex h-full flex-col overflow-hidden">
           <TaskDetailContent task={task} onSaveDetail={onSaveDetail} />
         </Card>
       ) : (

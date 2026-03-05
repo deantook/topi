@@ -70,7 +70,7 @@ export function TaskDetailEditor({ value, onSave, placeholder = "添加任务详
   }
 
   return (
-    <div className="rounded-md border border-input focus-within:ring-2 focus-within:ring-ring">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-md border border-input focus-within:ring-2 focus-within:ring-ring [&_.ProseMirror]:min-h-[200px] [&_.ProseMirror]:flex-1">
       <EditorContent editor={editor} />
     </div>
   );
