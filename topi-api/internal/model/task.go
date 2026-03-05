@@ -54,8 +54,9 @@ type Task struct {
 	DueDate   *string        `gorm:"type:datetime" json:"due_date"`
 	Priority  TaskPriority   `gorm:"size:6;default:none" json:"priority"`
 	Status    TaskStatus     `gorm:"size:16;default:active" json:"status"`
-	Owner     *TaskOwner     `gorm:"size:6" json:"owner,omitempty"`
-	Order     int            `gorm:"column:sort_order;default:0" json:"sort_order"`
+	Owner           *TaskOwner     `gorm:"size:6" json:"owner,omitempty"`
+	EstimatedHours   *int           `gorm:"column:estimated_hours" json:"estimated_hours,omitempty"`
+	Order            int            `gorm:"column:sort_order;default:0" json:"sort_order"`
 	CreatedAt time.Time      `json:"created_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
 }
