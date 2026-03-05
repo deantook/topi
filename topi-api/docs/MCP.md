@@ -57,6 +57,15 @@ http://localhost:8080/mcp/sse?token=${TOPI_TOKEN}
 
 具体是否支持取决于 MCP 客户端实现。
 
+## 任务工具参数
+
+| 工具 | 说明 | 参数 |
+|------|------|------|
+| `topi_create_task` | 创建任务 | `title`（必填）、`listId`、`dueDate`、`priority`、`detail`（Markdown，可选） |
+| `topi_create_tasks` | 批量创建任务 | `tasks`：JSON 数组，每项 `{title, listId?, dueDate?, priority?, detail?}` |
+| `topi_update_task` | 更新任务 | `id`（必填）、`title`、`listId`、`dueDate`、`priority`、`detail` |
+| `topi_list_tasks` | 列出任务 | 返回含 `detail` 字段 |
+
 ## 认证说明
 
 - MCP  endpoint 与 REST API 使用相同的 JWT 认证

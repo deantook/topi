@@ -47,13 +47,14 @@ func NewMCPServer(taskH *handlers.TaskHandlers, listH *handlers.ListHandlers, _ 
 			mcp.WithString("listId", mcp.Description("Optional list ID")),
 			mcp.WithString("dueDate", mcp.Description("Optional due date")),
 			mcp.WithString("priority", mcp.DefaultString("none")),
+			mcp.WithString("detail", mcp.Description("Optional task detail (Markdown)")),
 		),
 		taskH.CreateTask,
 	)
 	s.AddTool(
 		mcp.NewTool("topi_create_tasks",
 			mcp.WithDescription("Create multiple tasks at once"),
-			mcp.WithString("tasks", mcp.Required(), mcp.Description("JSON array of {title, listId?, dueDate?, priority?}")),
+			mcp.WithString("tasks", mcp.Required(), mcp.Description("JSON array of {title, listId?, dueDate?, priority?, detail?}")),
 		),
 		taskH.CreateTasks,
 	)
@@ -65,6 +66,7 @@ func NewMCPServer(taskH *handlers.TaskHandlers, listH *handlers.ListHandlers, _ 
 			mcp.WithString("listId", mcp.Description("New list ID")),
 			mcp.WithString("dueDate", mcp.Description("New due date")),
 			mcp.WithString("priority", mcp.Description("New priority")),
+			mcp.WithString("detail", mcp.Description("New task detail (Markdown)")),
 		),
 		taskH.UpdateTask,
 	)
