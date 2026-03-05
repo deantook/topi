@@ -11,6 +11,7 @@ export interface Task {
   completed: boolean;
   listId: string | null;
   dueDate: string | null; // ISO date string
+  detail: string | null; // Markdown
   priority: TaskPriority;
   status: TaskStatus;
   order: number;
@@ -24,6 +25,7 @@ interface ApiTask {
   completed: boolean;
   list_id: string | null;
   due_date: string | null;
+  detail?: string | null;
   priority?: string;
   status: TaskStatus;
   sort_order: number;
@@ -49,6 +51,7 @@ function mapTask(r: ApiTask): Task {
     completed: r.completed,
     listId: r.list_id ?? null,
     dueDate: r.due_date ?? null,
+    detail: r.detail ?? null,
     priority,
     status: r.status,
     order: r.sort_order ?? 0,
@@ -257,11 +260,12 @@ export function useTasks(filter: TaskFilter) {
   const updateTask = useCallback(
     async (
       id: string,
-      updates: Partial<Pick<Task, "title" | "dueDate" | "listId" | "priority">>
+      updates: Partial<Pick<Task, "title" | "dueDate" | "listId" | "priority" | "detail">>
     ) => {
       const body: Record<string, string | null> = {};
       if (updates.title !== undefined) body.title = updates.title;
       if (updates.listId !== undefined) body.listId = updates.listId;
+      if (updates.detail !== undefined) body.detail = updates.detail;
       if (updates.dueDate !== undefined) {
         const d = updates.dueDate ?? "";
         body.dueDate = d
