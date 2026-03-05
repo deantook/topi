@@ -3,73 +3,75 @@ name: Deploy to Server
 on:
   push:
     branches: [main]
-  workflow_dispatch: # 允许手动触发
+  workflow_dispatch:
 
 env:
-  DEPLOY_PATH: /var/www/topi
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}
 
 jobs:
-  build-and-deploy:
+  build-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      - name: Login to GHCR
+        uses: docker/login-action@v3
         with:
-          version: 9
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Build and push topi-web
+        uses: docker/build-push-action@v6
         with:
-          node-version: "20"
-          cache: "pnpm"
-          cache-dependency-path: topi/pnpm-lock.yaml
+          context: ./topi
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/topi-web:latest
+          build-args: |
+            VITE_API_URL=${{ secrets.VITE_API_URL }}
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - name: Build and push topi-api
+        uses: docker/build-push-action@v6
         with:
-          go-version: "1.25"
-          cache-dependency-path: topi-api/go.sum
+          context: ./topi-api
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/topi-api:latest
 
-      - name: Build Frontend
-        working-directory: topi
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm run build
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Build API Binary
-        working-directory: topi-api
-        run: |
-          go build -o topi-api ./cmd/server
-
-      - name: Prepare Deploy Artifacts
-        run: |
-          mkdir -p deploy-artifacts/frontend deploy-artifacts/api
-          cp -r topi/build deploy-artifacts/frontend/
-          cp topi/package.json deploy-artifacts/frontend/
-          cp topi/pnpm-lock.yaml deploy-artifacts/frontend/ 2>/dev/null || true
-          cd topi && pnpm install --omit=dev --frozen-lockfile && cp -r node_modules ../deploy-artifacts/frontend/
-          cp topi-api/topi-api deploy-artifacts/api/
-
-      - name: Deploy via SCP
+      - name: Copy docker-compose to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "deploy-artifacts/frontend/*,deploy-artifacts/api/*"
+          password: ${{ secrets.SERVER_PASSWORD }}
+          source: "docker-compose.yml"
           target: ${{ secrets.DEPLOY_PATH }}
 
-      - name: Restart Services on Server
+      - name: Deploy via SSH (password auth)
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          password: ${{ secrets.SERVER_PASSWORD }}
           script: |
+            set -e
             cd ${{ secrets.DEPLOY_PATH }}
-            sudo systemctl restart topi-api 2>/dev/null || true
-            sudo systemctl restart topi-web 2>/dev/null || true
+            export IMAGE_PREFIX=${{ env.IMAGE_PREFIX }}
+            docker compose pull
+            docker compose up -d
+            docker image prune -f
             echo "Deploy completed"
+          script_stop: true
