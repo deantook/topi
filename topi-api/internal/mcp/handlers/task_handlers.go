@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	topimcp "github.com/deantook/topi-api/internal/mcp"
@@ -45,6 +46,65 @@ func (h *TaskHandlers) ListTasks(ctx context.Context, req mcp.CallToolRequest) (
 			"due_date":  t.DueDate,
 			"priority":  t.Priority,
 			"status":    t.Status,
+		})
+	}
+	b, _ := json.Marshal(out)
+	return mcp.NewToolResultText(string(b)), nil
+}
+
+func (h *TaskHandlers) CreateTasks(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	userID := topimcp.UserIDFromContext(ctx)
+	if userID == "" {
+		return mcp.NewToolResultError("unauthorized"), nil
+	}
+	tasksStr, err := req.RequireString("tasks")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	var parsed []map[string]interface{}
+	if err := json.Unmarshal([]byte(tasksStr), &parsed); err != nil {
+		return mcp.NewToolResultError("tasks must be a valid JSON array"), nil
+	}
+	if len(parsed) == 0 {
+		return mcp.NewToolResultError("tasks must be a non-empty array"), nil
+	}
+	inputs := make([]service.BatchTaskInput, 0, len(parsed))
+	for i, m := range parsed {
+		titleVal, ok := m["title"]
+		if !ok || titleVal == nil {
+			return mcp.NewToolResultError(fmt.Sprintf("task[%d]: title is required", i)), nil
+		}
+		title, _ := titleVal.(string)
+		if title == "" {
+			return mcp.NewToolResultError(fmt.Sprintf("task[%d]: title is required", i)), nil
+		}
+		inp := service.BatchTaskInput{Title: title}
+		if v, ok := m["listId"]; ok && v != nil {
+			if s, ok := v.(string); ok {
+				inp.ListID = &s
+			}
+		}
+		if v, ok := m["dueDate"]; ok && v != nil {
+			if s, ok := v.(string); ok {
+				inp.DueDate = &s
+			}
+		}
+		if v, ok := m["priority"]; ok && v != nil {
+			if s, ok := v.(string); ok {
+				inp.Priority = &s
+			}
+		}
+		inputs = append(inputs, inp)
+	}
+	created, err := h.TaskSvc.BatchCreate(userID, inputs, time.UTC)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	out := make([]map[string]interface{}, 0, len(created))
+	for _, t := range created {
+		out = append(out, map[string]interface{}{
+			"id":    t.ID,
+			"title": t.Title,
 		})
 	}
 	b, _ := json.Marshal(out)

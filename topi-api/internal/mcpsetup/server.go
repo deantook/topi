@@ -51,6 +51,13 @@ func NewMCPServer(taskH *handlers.TaskHandlers, listH *handlers.ListHandlers, _ 
 		taskH.CreateTask,
 	)
 	s.AddTool(
+		mcp.NewTool("topi_create_tasks",
+			mcp.WithDescription("Create multiple tasks at once"),
+			mcp.WithString("tasks", mcp.Required(), mcp.Description("JSON array of {title, listId?, dueDate?, priority?}")),
+		),
+		taskH.CreateTasks,
+	)
+	s.AddTool(
 		mcp.NewTool("topi_update_task",
 			mcp.WithDescription("Update an existing task"),
 			mcp.WithString("id", mcp.Required()),
