@@ -19,7 +19,7 @@ func formatTaskForResponse(t model.Task, loc *time.Location) map[string]interfac
 	m := map[string]interface{}{
 		"id": t.ID, "list_id": t.ListID, "title": t.Title,
 		"completed": t.Completed, "priority": t.Priority, "status": t.Status,
-		"sort_order": t.Order,
+		"sort_order": t.Order, "detail": t.Detail,
 	}
 	m["created_at"] = t.CreatedAt.In(loc).Format(timezone.Layout)
 	if t.DueDate != nil {
@@ -72,6 +72,7 @@ type CreateTaskReq struct {
 	ListID   *string  `json:"listId"`
 	DueDate  *string  `json:"dueDate"`
 	Priority *string  `json:"priority"`
+	Detail   *string  `json:"detail"`
 }
 
 type CreateTasksBatchReq struct {
@@ -91,7 +92,7 @@ func (h *TaskHandler) Create(c *gin.Context) {
 			loc = l
 		}
 	}
-	t, err := h.svc.Create(userID, req.Title, req.ListID, req.DueDate, req.Priority, nil, loc)
+	t, err := h.svc.Create(userID, req.Title, req.ListID, req.DueDate, req.Priority, req.Detail, loc)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -129,6 +130,7 @@ func (h *TaskHandler) CreateBatch(c *gin.Context) {
 			ListID:   t.ListID,
 			DueDate:  t.DueDate,
 			Priority: t.Priority,
+			Detail:   t.Detail,
 		}
 	}
 	var loc *time.Location
@@ -154,6 +156,7 @@ type UpdateTaskReq struct {
 	ListID   *string `json:"listId"`
 	DueDate  *string `json:"dueDate"`
 	Priority *string `json:"priority"`
+	Detail   *string `json:"detail"`
 }
 
 func (h *TaskHandler) Update(c *gin.Context) {
@@ -170,7 +173,7 @@ func (h *TaskHandler) Update(c *gin.Context) {
 			loc = l
 		}
 	}
-	if err := h.svc.Update(userID, id, req.Title, req.ListID, req.DueDate, req.Priority, nil, loc); err != nil {
+	if err := h.svc.Update(userID, id, req.Title, req.ListID, req.DueDate, req.Priority, req.Detail, loc); err != nil {
 		if err == service.ErrTaskNotFound {
 			response.Error(c, http.StatusNotFound, "task not found")
 			return
