@@ -1,5 +1,25 @@
 basePath: /api/v1
 definitions:
+  handler.CreateTaskReq:
+    properties:
+      dueDate:
+        type: string
+      listId:
+        type: string
+      priority:
+        type: string
+      title:
+        type: string
+    required:
+    - title
+    type: object
+  handler.CreateTasksBatchReq:
+    properties:
+      tasks:
+        items:
+          $ref: '#/definitions/handler.CreateTaskReq'
+        type: array
+    type: object
   handler.LoginReq:
     properties:
       password:
@@ -100,6 +120,43 @@ paths:
       summary: 用户注册
       tags:
       - auth
+  /tasks/batch:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Bearer token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: 任务列表
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateTasksBatchReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: 批量创建任务
+      tags:
+      - tasks
 securityDefinitions:
   BearerAuth:
     in: header

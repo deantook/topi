@@ -100,6 +100,17 @@ func (h *TaskHandler) Create(c *gin.Context) {
 	response.OK(c, out)
 }
 
+// CreateBatch godoc
+// @Summary 批量创建任务
+// @Tags tasks
+// @Accept json
+// @Produce json
+// @Param Authorization header string true "Bearer token"
+// @Param body body CreateTasksBatchReq true "任务列表"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /tasks/batch [post]
 func (h *TaskHandler) CreateBatch(c *gin.Context) {
 	userID := c.GetString(middleware.UserIDKey)
 	var req CreateTasksBatchReq
