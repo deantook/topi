@@ -1,13 +1,25 @@
 # Topi MCP 工具参考
 
+## 归属人 (owner)
+
+每个任务有 `owner` 字段，显式声明由 human 还是 agent 创建/完成：
+
+| 取值 | 含义 |
+|------|------|
+| `human` | 用户（人）创建/完成 |
+| `agent` | Agent 通过 MCP 创建/完成 |
+| `null` | 历史任务未标记 |
+
+MCP 创建任务时默认 `agent`；可传 `owner: "human"` 表示用户名义。
+
 ## 任务工具完整参数
 
 | 工具 | 必填参数 | 可选参数 |
 |------|----------|----------|
-| `topi_list_tasks` | 无 | `filter`, `listId`, `date`, `startDate`, `endDate` |
-| `topi_create_task` | `title` | `listId`, `dueDate`, `priority`, `detail` |
-| `topi_create_tasks` | `tasks`（数组） | 每项含 `title`, `listId?`, `dueDate?`, `priority?`, `detail?` |
-| `topi_update_task` | `id` | `title`, `listId`, `dueDate`, `priority`, `detail` |
+| `topi_list_tasks` | 无 | `filter`, `listId`, `date`, `startDate`, `endDate`, `owner` |
+| `topi_create_task` | `title` | `listId`, `dueDate`, `priority`, `detail`, `owner` |
+| `topi_create_tasks` | `tasks`（数组） | 每项含 `title`, `listId?`, `dueDate?`, `priority?`, `detail?`, `owner?` |
+| `topi_update_task` | `id` | `title`, `listId`, `dueDate`, `priority`, `detail`, `owner` |
 | `topi_toggle_task` | `id` | 无 |
 | `topi_abandon_task` | `id` | 无 |
 | `topi_restore_task` | `id` | 无 |
@@ -50,3 +62,10 @@ ISO 8601：`2026-03-06` 或 `2026-03-06T10:00:00Z`
 `none`, `low`, `medium`, `high`
 
 默认 `none`
+
+## owner 枚举
+
+`human`, `agent`
+
+- MCP 创建任务默认 `agent`
+- `topi_list_tasks` 的 `owner` 参数：`human` | `agent` | `all`（或不传，表示全部）
