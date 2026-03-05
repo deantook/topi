@@ -42,6 +42,7 @@ func (h *TaskHandler) List(c *gin.Context) {
 	userID := c.GetString(middleware.UserIDKey)
 	filter := c.DefaultQuery("filter", "all")
 	listID := c.Query("listId")
+	owner := c.Query("owner")
 	date := c.Query("date")
 	startDate := c.Query("startDate")
 	endDate := c.Query("endDate")
@@ -49,13 +50,17 @@ func (h *TaskHandler) List(c *gin.Context) {
 	if listID != "" {
 		lp = &listID
 	}
+	var op *string
+	if owner != "" {
+		op = &owner
+	}
 	loc := time.UTC
 	if val, exists := c.Get(timezone.ContextKey); exists && val != nil {
 		if l, ok := val.(*time.Location); ok {
 			loc = l
 		}
 	}
-	tasks, err := h.svc.List(userID, filter, lp, date, startDate, endDate, loc)
+	tasks, err := h.svc.List(userID, filter, lp, op, date, startDate, endDate, loc)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return

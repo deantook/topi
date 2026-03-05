@@ -83,19 +83,19 @@ func (s *TaskService) GetCounts(userID string, loc *time.Location) (*DashboardCo
 	weekEnd := now.AddDate(0, 0, 6)
 	endStr := weekEnd.Format("2006-01-02")
 
-	allTasks, err := s.repo.ListByUserID(userID, "all", nil)
+	allTasks, err := s.repo.ListByUserID(userID, "all", nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	completedTasks, err := s.repo.ListByUserID(userID, "completed", nil)
+	completedTasks, err := s.repo.ListByUserID(userID, "completed", nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	abandonedTasks, err := s.repo.ListByUserID(userID, "abandoned", nil)
+	abandonedTasks, err := s.repo.ListByUserID(userID, "abandoned", nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	trashTasks, err := s.repo.ListByUserID(userID, "trash", nil)
+	trashTasks, err := s.repo.ListByUserID(userID, "trash", nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +155,7 @@ func NewTaskService(repo *repository.TaskRepository) *TaskService {
 }
 
 func (s *TaskService) Create(userID string, title string, listID *string, dueDate *string, priority *string, detail *string, loc *time.Location) (*model.Task, error) {
-	tasks, _ := s.repo.ListByUserID(userID, "all", nil)
+	tasks, _ := s.repo.ListByUserID(userID, "all", nil, nil)
 	maxOrder := 0
 	for _, t := range tasks {
 		if t.Order > maxOrder {
@@ -270,8 +270,12 @@ func (s *TaskService) BatchCreate(userID string, tasks []BatchTaskInput, loc *ti
 	return created, nil
 }
 
-func (s *TaskService) List(userID, filter string, listID *string, date, startDate, endDate string, loc *time.Location) ([]model.Task, error) {
-	tasks, err := s.repo.ListByUserID(userID, filter, listID)
+func (s *TaskService) List(userID, filter string, listID *string, owner *string, date, startDate, endDate string, loc *time.Location) ([]model.Task, error) {
+	var ownerParam *string
+	if owner != nil && *owner != "" && *owner != "all" {
+		ownerParam = owner
+	}
+	tasks, err := s.repo.ListByUserID(userID, filter, listID, ownerParam)
 	if err != nil {
 		return nil, err
 	}
@@ -416,7 +420,7 @@ func (s *TaskService) Delete(userID, id string) error {
 }
 
 func (s *TaskService) Reorder(userID, id string, newIndex int) error {
-	tasks, err := s.repo.ListByUserID(userID, "all", nil)
+	tasks, err := s.repo.ListByUserID(userID, "all", nil, nil)
 	if err != nil {
 		return err
 	}

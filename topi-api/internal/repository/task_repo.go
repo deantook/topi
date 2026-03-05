@@ -37,7 +37,7 @@ func (r *TaskRepository) GetMaxOrderWithTx(tx *gorm.DB, userID string) (int, err
 	return maxOrder + 1, nil
 }
 
-func (r *TaskRepository) ListByUserID(userID string, filter string, listID *string) ([]model.Task, error) {
+func (r *TaskRepository) ListByUserID(userID string, filter string, listID *string, owner *string) ([]model.Task, error) {
 	q := r.db.Where("user_id = ?", userID)
 
 	switch filter {
@@ -59,6 +59,14 @@ func (r *TaskRepository) ListByUserID(userID string, filter string, listID *stri
 			q = q.Where("status = ? AND list_id = ?", model.TaskStatusActive, *listID)
 		} else {
 			q = q.Where("status = ?", model.TaskStatusActive)
+		}
+	}
+
+	if owner != nil && *owner != "" && *owner != "all" {
+		if *owner == "human" {
+			q = q.Where("owner = ?", model.TaskOwnerHuman)
+		} else if *owner == "agent" {
+			q = q.Where("owner = ?", model.TaskOwnerAgent)
 		}
 	}
 

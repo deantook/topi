@@ -26,14 +26,19 @@ func (h *TaskHandlers) ListTasks(ctx context.Context, req mcp.CallToolRequest) (
 	}
 	filter := req.GetString("filter", "all")
 	listID := req.GetString("listId", "")
+	owner := req.GetString("owner", "")
 	var lp *string
 	if listID != "" {
 		lp = &listID
 	}
+	var op *string
+	if owner != "" {
+		op = &owner
+	}
 	date := req.GetString("date", "")
 	startDate := req.GetString("startDate", "")
 	endDate := req.GetString("endDate", "")
-	tasks, err := h.TaskSvc.List(userID, filter, lp, date, startDate, endDate, time.UTC)
+	tasks, err := h.TaskSvc.List(userID, filter, lp, op, date, startDate, endDate, time.UTC)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
