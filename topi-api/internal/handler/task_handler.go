@@ -19,7 +19,7 @@ func formatTaskForResponse(t model.Task, loc *time.Location) map[string]interfac
 	m := map[string]interface{}{
 		"id": t.ID, "list_id": t.ListID, "title": t.Title,
 		"completed": t.Completed, "priority": t.Priority, "status": t.Status,
-		"sort_order": t.Order, "detail": t.Detail,
+		"sort_order": t.Order, "detail": t.Detail, "owner": t.Owner,
 	}
 	m["created_at"] = t.CreatedAt.In(loc).Format(timezone.Layout)
 	if t.DueDate != nil {
@@ -78,6 +78,7 @@ type CreateTaskReq struct {
 	DueDate  *string  `json:"dueDate"`
 	Priority *string  `json:"priority"`
 	Detail   *string  `json:"detail"`
+	Owner    *string  `json:"owner"`
 }
 
 type CreateTasksBatchReq struct {
@@ -97,7 +98,11 @@ func (h *TaskHandler) Create(c *gin.Context) {
 			loc = l
 		}
 	}
-	t, err := h.svc.Create(userID, req.Title, req.ListID, req.DueDate, req.Priority, req.Detail, loc)
+	owner := model.TaskOwnerHumanPtr()
+	if req.Owner != nil && *req.Owner == "agent" {
+		owner = model.TaskOwnerAgentPtr()
+	}
+	t, err := h.svc.Create(userID, req.Title, req.ListID, req.DueDate, req.Priority, req.Detail, owner, loc)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -136,6 +141,7 @@ func (h *TaskHandler) CreateBatch(c *gin.Context) {
 			DueDate:  t.DueDate,
 			Priority: t.Priority,
 			Detail:   t.Detail,
+			Owner:    t.Owner,
 		}
 	}
 	var loc *time.Location
@@ -144,7 +150,7 @@ func (h *TaskHandler) CreateBatch(c *gin.Context) {
 			loc = l
 		}
 	}
-	tasks, err := h.svc.BatchCreate(userID, inputs, loc)
+	tasks, err := h.svc.BatchCreate(userID, inputs, model.TaskOwnerHumanPtr(), loc)
 	if err != nil {
 		response.Error(c, http.StatusBadRequest, err.Error())
 		return
@@ -162,6 +168,7 @@ type UpdateTaskReq struct {
 	DueDate  *string `json:"dueDate"`
 	Priority *string `json:"priority"`
 	Detail   *string `json:"detail"`
+	Owner    *string `json:"owner"`
 }
 
 func (h *TaskHandler) Update(c *gin.Context) {
@@ -178,7 +185,7 @@ func (h *TaskHandler) Update(c *gin.Context) {
 			loc = l
 		}
 	}
-	if err := h.svc.Update(userID, id, req.Title, req.ListID, req.DueDate, req.Priority, req.Detail, loc); err != nil {
+	if err := h.svc.Update(userID, id, req.Title, req.ListID, req.DueDate, req.Priority, req.Detail, req.Owner, loc); err != nil {
 		if err == service.ErrTaskNotFound {
 			response.Error(c, http.StatusNotFound, "task not found")
 			return

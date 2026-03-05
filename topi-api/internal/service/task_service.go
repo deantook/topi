@@ -144,6 +144,7 @@ type BatchTaskInput struct {
 	DueDate  *string
 	Priority *string
 	Detail   *string
+	Owner    *string
 }
 
 type TaskService struct {
@@ -154,7 +155,7 @@ func NewTaskService(repo *repository.TaskRepository) *TaskService {
 	return &TaskService{repo: repo}
 }
 
-func (s *TaskService) Create(userID string, title string, listID *string, dueDate *string, priority *string, detail *string, loc *time.Location) (*model.Task, error) {
+func (s *TaskService) Create(userID string, title string, listID *string, dueDate *string, priority *string, detail *string, owner *model.TaskOwner, loc *time.Location) (*model.Task, error) {
 	tasks, _ := s.repo.ListByUserID(userID, "all", nil, nil)
 	maxOrder := 0
 	for _, t := range tasks {
@@ -168,6 +169,9 @@ func (s *TaskService) Create(userID string, title string, listID *string, dueDat
 		case "none", "low", "medium", "high":
 			prio = model.TaskPriority(*priority)
 		}
+	}
+	if owner == nil {
+		owner = model.TaskOwnerHumanPtr()
 	}
 	var normalizedDue *string
 	if dueDate != nil && *dueDate != "" {
@@ -186,6 +190,7 @@ func (s *TaskService) Create(userID string, title string, listID *string, dueDat
 		DueDate:  normalizedDue,
 		Priority: prio,
 		Status:   model.TaskStatusActive,
+		Owner:    owner,
 		Order:    maxOrder + 1,
 	}
 	if err := s.repo.Create(t); err != nil {
@@ -195,7 +200,7 @@ func (s *TaskService) Create(userID string, title string, listID *string, dueDat
 }
 
 // BatchCreate creates multiple tasks in a transaction. Returns error on validation failure or DB error.
-func (s *TaskService) BatchCreate(userID string, tasks []BatchTaskInput, loc *time.Location) ([]*model.Task, error) {
+func (s *TaskService) BatchCreate(userID string, tasks []BatchTaskInput, defaultOwner *model.TaskOwner, loc *time.Location) ([]*model.Task, error) {
 	if len(tasks) == 0 {
 		return nil, errors.New("at least one task required")
 	}
@@ -210,6 +215,7 @@ func (s *TaskService) BatchCreate(userID string, tasks []BatchTaskInput, loc *ti
 		dueDate  *string
 		priority model.TaskPriority
 		detail   *string
+		owner    *model.TaskOwner
 	}
 	validated := make([]validatedTask, len(tasks))
 	for i, inp := range tasks {
@@ -238,6 +244,14 @@ func (s *TaskService) BatchCreate(userID string, tasks []BatchTaskInput, loc *ti
 			}
 		}
 		validated[i].detail = inp.Detail
+		// owner: "human" -> TaskOwnerHuman, "agent" -> TaskOwnerAgent, else defaultOwner
+		if inp.Owner != nil && *inp.Owner == "human" {
+			validated[i].owner = model.TaskOwnerHumanPtr()
+		} else if inp.Owner != nil && *inp.Owner == "agent" {
+			validated[i].owner = model.TaskOwnerAgentPtr()
+		} else {
+			validated[i].owner = defaultOwner
+		}
 	}
 
 	var created []*model.Task
@@ -255,6 +269,7 @@ func (s *TaskService) BatchCreate(userID string, tasks []BatchTaskInput, loc *ti
 				DueDate:  v.dueDate,
 				Priority: v.priority,
 				Status:   model.TaskStatusActive,
+				Owner:    v.owner,
 				Order:    startOrder + i,
 			}
 			if err := s.repo.CreateWithTx(tx, t); err != nil {
@@ -321,7 +336,7 @@ func (s *TaskService) List(userID, filter string, listID *string, owner *string,
 	return tasks, nil
 }
 
-func (s *TaskService) Update(userID, id string, title *string, listID *string, dueDate *string, priority *string, detail *string, loc *time.Location) error {
+func (s *TaskService) Update(userID, id string, title *string, listID *string, dueDate *string, priority *string, detail *string, owner *string, loc *time.Location) error {
 	if _, err := s.repo.GetByIDAndUserID(id, userID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return ErrTaskNotFound
@@ -355,6 +370,16 @@ func (s *TaskService) Update(userID, id string, title *string, listID *string, d
 	}
 	if detail != nil {
 		fields["detail"] = *detail
+	}
+	if owner != nil {
+		switch *owner {
+		case "human":
+			fields["owner"] = model.TaskOwnerHuman
+		case "agent":
+			fields["owner"] = model.TaskOwnerAgent
+		default:
+			return errors.New("owner must be 'human' or 'agent'")
+		}
 	}
 	return s.repo.UpdateFields(id, userID, fields)
 }

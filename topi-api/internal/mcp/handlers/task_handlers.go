@@ -7,6 +7,7 @@ import (
 	"time"
 
 	topimcp "github.com/deantook/topi-api/internal/mcp"
+	"github.com/deantook/topi-api/internal/model"
 	"github.com/deantook/topi-api/internal/service"
 	"github.com/mark3labs/mcp-go/mcp"
 )
@@ -105,9 +106,15 @@ func (h *TaskHandlers) CreateTasks(ctx context.Context, req mcp.CallToolRequest)
 				inp.Detail = &s
 			}
 		}
+		if v, ok := m["owner"]; ok && v != nil {
+			if s, ok := v.(string); ok {
+				inp.Owner = &s
+			}
+		}
 		inputs = append(inputs, inp)
 	}
-	created, err := h.TaskSvc.BatchCreate(userID, inputs, time.UTC)
+	// Task 5 will wire MCP with model.TaskOwnerAgentPtr(); for now use agent as default for MCP
+	created, err := h.TaskSvc.BatchCreate(userID, inputs, model.TaskOwnerAgentPtr(), time.UTC)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
@@ -147,7 +154,8 @@ func (h *TaskHandlers) CreateTask(ctx context.Context, req mcp.CallToolRequest) 
 	if detail != "" {
 		dpDetail = &detail
 	}
-	task, err := h.TaskSvc.Create(userID, title, lp, dp, &priority, dpDetail, time.UTC)
+	// Task 5 will wire MCP with &model.TaskOwnerAgent; for now use nil (service defaults to human)
+	task, err := h.TaskSvc.Create(userID, title, lp, dp, &priority, dpDetail, nil, time.UTC)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
@@ -186,7 +194,13 @@ func (h *TaskHandlers) UpdateTask(ctx context.Context, req mcp.CallToolRequest) 
 		v := req.GetString("detail", "")
 		detail = &v
 	}
-	if err := h.TaskSvc.Update(userID, id, title, listID, dueDate, priority, detail, time.UTC); err != nil {
+	var owner *string
+	if _, ok := args["owner"]; ok {
+		v := req.GetString("owner", "")
+		owner = &v
+	}
+	// Task 5 will wire MCP owner from request; for now pass owner (nil if not in args)
+	if err := h.TaskSvc.Update(userID, id, title, listID, dueDate, priority, detail, owner, time.UTC); err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
 	return mcp.NewToolResultText("task updated"), nil

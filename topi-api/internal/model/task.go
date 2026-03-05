@@ -32,6 +32,18 @@ const (
 	TaskOwnerAgent TaskOwner = "agent"
 )
 
+// TaskOwnerHumanPtr returns a pointer to TaskOwnerHuman for use when default owner is human.
+func TaskOwnerHumanPtr() *TaskOwner {
+	o := TaskOwnerHuman
+	return &o
+}
+
+// TaskOwnerAgentPtr returns a pointer to TaskOwnerAgent for use when default owner is agent.
+func TaskOwnerAgentPtr() *TaskOwner {
+	o := TaskOwnerAgent
+	return &o
+}
+
 type Task struct {
 	ID        string         `gorm:"type:char(36);primaryKey" json:"id"`
 	UserID    string         `gorm:"type:char(36);index;not null" json:"-"`
