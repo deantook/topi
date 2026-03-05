@@ -62,6 +62,11 @@ export function TaskPageWithDetail({
             toast.error("保存失败，请重试");
           })
         }
+        onUpdateOwner={(id, owner) =>
+          updateTask(id, { owner }).catch(() => {
+            toast.error("更新失败，请重试");
+          })
+        }
       />
     </div>
   );

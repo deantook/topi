@@ -1,10 +1,13 @@
 "use client";
 
 import { Suspense, lazy } from "react";
+import { Bot, User } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { Task } from "@/hooks/use-tasks";
+import { OWNER_LABEL } from "@/lib/task-constants";
 
 const TaskDetailEditor = lazy(() =>
   import("./task-detail-editor").then((m) => ({ default: m.TaskDetailEditor }))
@@ -15,6 +18,7 @@ export interface TaskDetailPanelProps {
   task: Task | null;
   onClose?: () => void;
   onSaveDetail: (id: string, detail: string) => void;
+  onUpdateOwner?: (id: string, owner: "human" | "agent") => void;
 }
 
 const EmptyState = () => (
@@ -26,14 +30,43 @@ const EmptyState = () => (
 function TaskDetailContent({
   task,
   onSaveDetail,
+  onUpdateOwner,
 }: {
   task: Task;
   onSaveDetail: (id: string, detail: string) => void;
+  onUpdateOwner?: (id: string, owner: "human" | "agent") => void;
 }) {
+  const ownerLabel = task.owner ? OWNER_LABEL[task.owner] : "未知";
+  const OwnerIcon = task.owner === "agent" ? Bot : User;
+
   return (
     <>
       <CardHeader className="shrink-0 pb-2">
         <CardTitle className="text-base">{task.title}</CardTitle>
+        <div className="mt-2 flex items-center gap-2">
+          <OwnerIcon className="size-3.5 shrink-0 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">{ownerLabel}</span>
+          {onUpdateOwner && (
+            <div className="ml-2 inline-flex rounded-md border border-input bg-muted/30 p-0.5">
+              <Button
+                variant={task.owner === "human" ? "secondary" : "ghost"}
+                size="xs"
+                onClick={() => onUpdateOwner(task.id, "human")}
+              >
+                <User className="size-3" />
+                {OWNER_LABEL.human}
+              </Button>
+              <Button
+                variant={task.owner === "agent" ? "secondary" : "ghost"}
+                size="xs"
+                onClick={() => onUpdateOwner(task.id, "agent")}
+              >
+                <Bot className="size-3" />
+                {OWNER_LABEL.agent}
+              </Button>
+            </div>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="flex min-h-0 flex-1 flex-col overflow-auto pt-0">
         <Suspense fallback={<div className="min-h-[200px] animate-pulse rounded-md bg-muted/20" />}>
@@ -48,24 +81,50 @@ function TaskDetailContent({
   );
 }
 
-export function TaskDetailPanel({ taskId, task, onClose, onSaveDetail }: TaskDetailPanelProps) {
+export function TaskDetailPanel({
+  taskId,
+  task,
+  onClose,
+  onSaveDetail,
+  onUpdateOwner,
+}: TaskDetailPanelProps) {
   const isMobile = useIsMobile();
 
-  const content =
-    taskId == null ? (
-      <EmptyState />
-    ) : task ? (
-      <TaskDetailContent task={task} onSaveDetail={onSaveDetail} />
-    ) : (
-      <EmptyState />
-    );
-
   if (isMobile) {
+    const ownerLabel = task?.owner ? OWNER_LABEL[task.owner] : "未知";
+    const OwnerIcon = task?.owner === "agent" ? Bot : User;
+
     return (
       <Sheet open={!!taskId} onOpenChange={(open) => !open && onClose?.()}>
         <SheetContent side="right" className="flex flex-col overflow-auto sm:max-w-md">
           <SheetHeader className="shrink-0">
             <SheetTitle>{task?.title ?? "任务详情"}</SheetTitle>
+            {task && (
+              <div className="flex items-center gap-2 pt-2">
+                <OwnerIcon className="size-3.5 shrink-0 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">{ownerLabel}</span>
+                {onUpdateOwner && (
+                  <div className="ml-2 inline-flex rounded-md border border-input bg-muted/30 p-0.5">
+                    <Button
+                      variant={task.owner === "human" ? "secondary" : "ghost"}
+                      size="xs"
+                      onClick={() => onUpdateOwner(task.id, "human")}
+                    >
+                      <User className="size-3" />
+                      {OWNER_LABEL.human}
+                    </Button>
+                    <Button
+                      variant={task.owner === "agent" ? "secondary" : "ghost"}
+                      size="xs"
+                      onClick={() => onUpdateOwner(task.id, "agent")}
+                    >
+                      <Bot className="size-3" />
+                      {OWNER_LABEL.agent}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
           </SheetHeader>
           <div className="flex-1 overflow-auto py-4">
             {task ? (
@@ -91,7 +150,11 @@ export function TaskDetailPanel({ taskId, task, onClose, onSaveDetail }: TaskDet
         <EmptyState />
       ) : task ? (
         <Card className="flex h-full flex-col overflow-hidden shadow-none">
-          <TaskDetailContent task={task} onSaveDetail={onSaveDetail} />
+          <TaskDetailContent
+            task={task}
+            onSaveDetail={onSaveDetail}
+            onUpdateOwner={onUpdateOwner}
+          />
         </Card>
       ) : (
         <EmptyState />
