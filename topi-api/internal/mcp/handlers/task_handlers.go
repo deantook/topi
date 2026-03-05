@@ -131,7 +131,7 @@ func (h *TaskHandlers) CreateTask(ctx context.Context, req mcp.CallToolRequest) 
 		dp = &dueDate
 	}
 	priority := req.GetString("priority", "none")
-	task, err := h.TaskSvc.Create(userID, title, lp, dp, &priority, time.UTC)
+	task, err := h.TaskSvc.Create(userID, title, lp, dp, &priority, nil, time.UTC)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
@@ -166,7 +166,7 @@ func (h *TaskHandlers) UpdateTask(ctx context.Context, req mcp.CallToolRequest) 
 		v := req.GetString("priority", "none")
 		priority = &v
 	}
-	if err := h.TaskSvc.Update(userID, id, title, listID, dueDate, priority, time.UTC); err != nil {
+	if err := h.TaskSvc.Update(userID, id, title, listID, dueDate, priority, nil, time.UTC); err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
 	return mcp.NewToolResultText("task updated"), nil

@@ -91,7 +91,7 @@ func (h *TaskHandler) Create(c *gin.Context) {
 			loc = l
 		}
 	}
-	t, err := h.svc.Create(userID, req.Title, req.ListID, req.DueDate, req.Priority, loc)
+	t, err := h.svc.Create(userID, req.Title, req.ListID, req.DueDate, req.Priority, nil, loc)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -170,7 +170,7 @@ func (h *TaskHandler) Update(c *gin.Context) {
 			loc = l
 		}
 	}
-	if err := h.svc.Update(userID, id, req.Title, req.ListID, req.DueDate, req.Priority, loc); err != nil {
+	if err := h.svc.Update(userID, id, req.Title, req.ListID, req.DueDate, req.Priority, nil, loc); err != nil {
 		if err == service.ErrTaskNotFound {
 			response.Error(c, http.StatusNotFound, "task not found")
 			return

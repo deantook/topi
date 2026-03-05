@@ -64,6 +64,7 @@ type BatchTaskInput struct {
 	ListID   *string
 	DueDate  *string
 	Priority *string
+	Detail   *string
 }
 
 type TaskService struct {
@@ -74,7 +75,7 @@ func NewTaskService(repo *repository.TaskRepository) *TaskService {
 	return &TaskService{repo: repo}
 }
 
-func (s *TaskService) Create(userID string, title string, listID *string, dueDate *string, priority *string, loc *time.Location) (*model.Task, error) {
+func (s *TaskService) Create(userID string, title string, listID *string, dueDate *string, priority *string, detail *string, loc *time.Location) (*model.Task, error) {
 	tasks, _ := s.repo.ListByUserID(userID, "all", nil)
 	maxOrder := 0
 	for _, t := range tasks {
@@ -102,6 +103,7 @@ func (s *TaskService) Create(userID string, title string, listID *string, dueDat
 		UserID:   userID,
 		Title:    title,
 		ListID:   listID,
+		Detail:   detail,
 		DueDate:  normalizedDue,
 		Priority: prio,
 		Status:   model.TaskStatusActive,
@@ -128,6 +130,7 @@ func (s *TaskService) BatchCreate(userID string, tasks []BatchTaskInput, loc *ti
 		listID   *string
 		dueDate  *string
 		priority model.TaskPriority
+		detail   *string
 	}
 	validated := make([]validatedTask, len(tasks))
 	for i, inp := range tasks {
@@ -155,6 +158,7 @@ func (s *TaskService) BatchCreate(userID string, tasks []BatchTaskInput, loc *ti
 				return nil, fmt.Errorf("task[%d].priority: invalid value", i)
 			}
 		}
+		validated[i].detail = inp.Detail
 	}
 
 	var created []*model.Task
@@ -168,6 +172,7 @@ func (s *TaskService) BatchCreate(userID string, tasks []BatchTaskInput, loc *ti
 				UserID:   userID,
 				Title:    v.title,
 				ListID:   v.listID,
+				Detail:   v.detail,
 				DueDate:  v.dueDate,
 				Priority: v.priority,
 				Status:   model.TaskStatusActive,
@@ -233,7 +238,7 @@ func (s *TaskService) List(userID, filter string, listID *string, date, startDat
 	return tasks, nil
 }
 
-func (s *TaskService) Update(userID, id string, title *string, listID *string, dueDate *string, priority *string, loc *time.Location) error {
+func (s *TaskService) Update(userID, id string, title *string, listID *string, dueDate *string, priority *string, detail *string, loc *time.Location) error {
 	if _, err := s.repo.GetByIDAndUserID(id, userID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return ErrTaskNotFound
@@ -264,6 +269,9 @@ func (s *TaskService) Update(userID, id string, title *string, listID *string, d
 		case "none", "low", "medium", "high":
 			fields["priority"] = model.TaskPriority(*priority)
 		}
+	}
+	if detail != nil {
+		fields["detail"] = *detail
 	}
 	return s.repo.UpdateFields(id, userID, fields)
 }
