@@ -371,7 +371,7 @@ func (s *TaskService) List(userID, filter string, listID *string, owner *string,
 	return tasks, nil
 }
 
-func (s *TaskService) Update(userID, id string, title *string, listID *string, dueDate *string, priority *string, detail *string, owner *string, estimatedHours *int, loc *time.Location) error {
+func (s *TaskService) Update(userID, id string, title *string, listID *string, dueDate *string, priority *string, detail *string, owner *string, estimatedHours *int, clearEstimatedHours bool, loc *time.Location) error {
 	if _, err := s.repo.GetByIDAndUserID(id, userID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return ErrTaskNotFound
@@ -416,7 +416,9 @@ func (s *TaskService) Update(userID, id string, title *string, listID *string, d
 			return errors.New("owner must be 'human' or 'agent'")
 		}
 	}
-	if estimatedHours != nil {
+	if clearEstimatedHours {
+		fields["estimated_hours"] = nil
+	} else if estimatedHours != nil {
 		if *estimatedHours < 1 {
 			return errors.New("estimated_hours 需为正整数")
 		}

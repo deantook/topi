@@ -18,6 +18,7 @@ export interface Task {
   order: number;
   createdAt: string; // ISO string
   owner: "human" | "agent" | null;
+  estimatedHours: number | null;
 }
 
 /** API response task (snake_case) */
@@ -33,6 +34,7 @@ interface ApiTask {
   sort_order: number;
   created_at: string;
   owner?: string | null;
+  estimated_hours?: number | null;
 }
 
 const PRIORITY_ORDER: Record<TaskPriority, number> = {
@@ -49,6 +51,10 @@ function mapTask(r: ApiTask): Task {
   const rawOwner = r.owner;
   const owner: "human" | "agent" | null =
     rawOwner === "human" || rawOwner === "agent" ? rawOwner : null;
+  const estimatedHours =
+    typeof r.estimated_hours === "number" && r.estimated_hours >= 1
+      ? r.estimated_hours
+      : null;
   return {
     id: r.id,
     title: r.title,
@@ -61,6 +67,7 @@ function mapTask(r: ApiTask): Task {
     order: r.sort_order ?? 0,
     createdAt: r.created_at,
     owner,
+    estimatedHours,
   };
 }
 
@@ -213,13 +220,19 @@ export function useTasks(filter: TaskFilter, options?: { owner?: string }) {
   const addTask = useCallback(
     async (
       title: string,
-      options?: { listId?: string; dueDate?: string; priority?: TaskPriority }
+      options?: {
+        listId?: string;
+        dueDate?: string;
+        priority?: TaskPriority;
+        estimatedHours?: number;
+      }
     ) => {
       const body: {
         title: string;
         listId?: string;
         dueDate?: string;
         priority?: string;
+        estimated_hours?: number;
         owner: "human";
       } = {
         title: title.trim() || "新任务",
@@ -228,6 +241,9 @@ export function useTasks(filter: TaskFilter, options?: { owner?: string }) {
       if (options?.listId) body.listId = options.listId;
       if (options?.dueDate) body.dueDate = options.dueDate;
       if (options?.priority) body.priority = options.priority;
+      if (options?.estimatedHours != null && options.estimatedHours >= 1) {
+        body.estimated_hours = options.estimatedHours;
+      }
       try {
         const res = (await apiClient.post("/tasks", body)) as { data: ApiTask };
         if (res?.data) {
@@ -259,10 +275,13 @@ export function useTasks(filter: TaskFilter, options?: { owner?: string }) {
     async (
       id: string,
       updates: Partial<
-        Pick<Task, "title" | "dueDate" | "listId" | "priority" | "detail" | "owner">
+        Pick<
+          Task,
+          "title" | "dueDate" | "listId" | "priority" | "detail" | "owner" | "estimatedHours"
+        >
       >
     ) => {
-      const body: Record<string, string | null> = {};
+      const body: Record<string, string | number | boolean | null> = {};
       if (updates.title !== undefined) body.title = updates.title;
       if (updates.listId !== undefined) body.listId = updates.listId;
       if (updates.detail !== undefined) body.detail = updates.detail;
@@ -280,6 +299,13 @@ export function useTasks(filter: TaskFilter, options?: { owner?: string }) {
       }
       if (updates.priority !== undefined) body.priority = updates.priority;
       if (updates.owner !== undefined) body.owner = updates.owner;
+      if (updates.estimatedHours !== undefined) {
+        if (updates.estimatedHours != null && updates.estimatedHours >= 1) {
+          body.estimated_hours = updates.estimatedHours;
+        } else {
+          body.clear_estimated_hours = true;
+        }
+      }
       if (Object.keys(body).length === 0) return;
       try {
         await apiClient.patch(`/tasks/${id}`, body);

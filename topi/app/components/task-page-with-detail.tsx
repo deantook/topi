@@ -67,6 +67,11 @@ export function TaskPageWithDetail({
             toast.error("更新失败，请重试");
           })
         }
+        onUpdateEstimatedHours={(id, estimatedHours) =>
+          updateTask(id, { estimatedHours }).catch(() => {
+            toast.error("更新失败，请重试");
+          })
+        }
       />
     </div>
   );

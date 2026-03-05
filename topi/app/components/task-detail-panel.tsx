@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, lazy } from "react";
-import { Bot, User } from "lucide-react";
+import { Bot, Clock, User } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ export interface TaskDetailPanelProps {
   onClose?: () => void;
   onSaveDetail: (id: string, detail: string) => void;
   onUpdateOwner?: (id: string, owner: "human" | "agent") => void;
+  onUpdateEstimatedHours?: (id: string, estimatedHours: number | null) => void;
 }
 
 const EmptyState = () => (
@@ -27,14 +28,18 @@ const EmptyState = () => (
   </div>
 );
 
+const ESTIMATED_HOURS_OPTIONS = [1, 2, 3, 4, 5, 8] as const;
+
 function TaskDetailContent({
   task,
   onSaveDetail,
   onUpdateOwner,
+  onUpdateEstimatedHours,
 }: {
   task: Task;
   onSaveDetail: (id: string, detail: string) => void;
   onUpdateOwner?: (id: string, owner: "human" | "agent") => void;
+  onUpdateEstimatedHours?: (id: string, estimatedHours: number | null) => void;
 }) {
   const ownerLabel = task.owner ? OWNER_LABEL[task.owner] : "未知";
   const OwnerIcon = task.owner === "agent" ? Bot : User;
@@ -43,7 +48,7 @@ function TaskDetailContent({
     <>
       <CardHeader className="shrink-0 pb-2">
         <CardTitle className="text-base">{task.title}</CardTitle>
-        <div className="mt-2 flex items-center gap-2">
+        <div className="mt-2 flex flex-wrap items-center gap-2">
           <OwnerIcon className="size-3.5 shrink-0 text-muted-foreground" />
           <span className="text-sm text-muted-foreground">{ownerLabel}</span>
           {onUpdateOwner && (
@@ -64,6 +69,29 @@ function TaskDetailContent({
                 <Bot className="size-3" />
                 {OWNER_LABEL.agent}
               </Button>
+            </div>
+          )}
+          {onUpdateEstimatedHours && (
+            <div className="flex items-center gap-2">
+              <Clock className="size-3.5 shrink-0 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">预估耗时</span>
+              <div className="inline-flex rounded-md border border-input bg-muted/30 p-0.5">
+                {ESTIMATED_HOURS_OPTIONS.map((h) => {
+                  const isSelected = task.estimatedHours === h;
+                  return (
+                    <Button
+                      key={h}
+                      variant={isSelected ? "secondary" : "ghost"}
+                      size="xs"
+                      onClick={() =>
+                        onUpdateEstimatedHours(task.id, isSelected ? null : h)
+                      }
+                    >
+                      {h}h
+                    </Button>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
@@ -87,6 +115,7 @@ export function TaskDetailPanel({
   onClose,
   onSaveDetail,
   onUpdateOwner,
+  onUpdateEstimatedHours,
 }: TaskDetailPanelProps) {
   const isMobile = useIsMobile();
 
@@ -100,7 +129,7 @@ export function TaskDetailPanel({
           <SheetHeader className="shrink-0">
             <SheetTitle>{task?.title ?? "任务详情"}</SheetTitle>
             {task && (
-              <div className="flex items-center gap-2 pt-2">
+              <div className="flex flex-col gap-2 pt-2">
                 <OwnerIcon className="size-3.5 shrink-0 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">{ownerLabel}</span>
                 {onUpdateOwner && (
@@ -121,6 +150,29 @@ export function TaskDetailPanel({
                       <Bot className="size-3" />
                       {OWNER_LABEL.agent}
                     </Button>
+                  </div>
+                )}
+                {onUpdateEstimatedHours && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Clock className="size-3.5 shrink-0 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">预估耗时</span>
+                    <div className="inline-flex rounded-md border border-input bg-muted/30 p-0.5">
+                      {ESTIMATED_HOURS_OPTIONS.map((h) => {
+                        const isSelected = task.estimatedHours === h;
+                        return (
+                          <Button
+                            key={h}
+                            variant={isSelected ? "secondary" : "ghost"}
+                            size="xs"
+                            onClick={() =>
+                              onUpdateEstimatedHours(task.id, isSelected ? null : h)
+                            }
+                          >
+                            {h}h
+                          </Button>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>
@@ -154,6 +206,7 @@ export function TaskDetailPanel({
             task={task}
             onSaveDetail={onSaveDetail}
             onUpdateOwner={onUpdateOwner}
+            onUpdateEstimatedHours={onUpdateEstimatedHours}
           />
         </Card>
       ) : (

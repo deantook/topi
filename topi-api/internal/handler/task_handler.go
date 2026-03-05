@@ -166,13 +166,14 @@ func (h *TaskHandler) CreateBatch(c *gin.Context) {
 }
 
 type UpdateTaskReq struct {
-	Title          *string `json:"title"`
-	ListID         *string `json:"listId"`
-	DueDate        *string `json:"dueDate"`
-	Priority       *string `json:"priority"`
-	Detail         *string `json:"detail"`
-	Owner          *string `json:"owner"`
-	EstimatedHours *int    `json:"estimated_hours"`
+	Title               *string `json:"title"`
+	ListID              *string `json:"listId"`
+	DueDate             *string `json:"dueDate"`
+	Priority            *string `json:"priority"`
+	Detail              *string `json:"detail"`
+	Owner               *string `json:"owner"`
+	EstimatedHours      *int    `json:"estimated_hours"`
+	ClearEstimatedHours *bool   `json:"clear_estimated_hours"`
 }
 
 func (h *TaskHandler) Update(c *gin.Context) {
@@ -189,7 +190,8 @@ func (h *TaskHandler) Update(c *gin.Context) {
 			loc = l
 		}
 	}
-	if err := h.svc.Update(userID, id, req.Title, req.ListID, req.DueDate, req.Priority, req.Detail, req.Owner, req.EstimatedHours, loc); err != nil {
+	clearEstHours := req.ClearEstimatedHours != nil && *req.ClearEstimatedHours
+	if err := h.svc.Update(userID, id, req.Title, req.ListID, req.DueDate, req.Priority, req.Detail, req.Owner, req.EstimatedHours, clearEstHours, loc); err != nil {
 		if err == service.ErrTaskNotFound {
 			response.Error(c, http.StatusNotFound, "task not found")
 			return

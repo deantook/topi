@@ -234,7 +234,7 @@ func (h *TaskHandlers) UpdateTask(ctx context.Context, req mcp.CallToolRequest) 
 		}
 		estimatedHours = eh
 	}
-	if err := h.TaskSvc.Update(userID, id, title, listID, dueDate, priority, detail, owner, estimatedHours, time.UTC); err != nil {
+	if err := h.TaskSvc.Update(userID, id, title, listID, dueDate, priority, detail, owner, estimatedHours, false, time.UTC); err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
 	return mcp.NewToolResultText("task updated"), nil

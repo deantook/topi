@@ -20,6 +20,7 @@ import {
   GripVertical,
   Trash2,
   Calendar,
+  Clock,
   Flag,
   User,
   Bot,
@@ -125,7 +126,7 @@ function SortableTaskRow({
   handleEditKeyDown: (e: React.KeyboardEvent, taskId: string) => void;
   handleDelete: (taskId: string) => void;
   abandonTask: (id: string) => void;
-  updateTask: (id: string, updates: Partial<Pick<Task, "title" | "dueDate" | "listId" | "priority">>) => void;
+  updateTask: (id: string, updates: Partial<Pick<Task, "title" | "dueDate" | "listId" | "priority" | "estimatedHours">>) => void;
   getList: (id: string) => { name: string } | undefined;
   setEditingText: (s: string) => void;
   onSelectTask?: (id: string | null) => void;
@@ -160,6 +161,27 @@ function SortableTaskRow({
         <Calendar className="size-4" />
         截止日期
       </ContextMenuItem>
+      <div className="px-2 py-1.5">
+        <ContextMenuLabel className="px-0 text-xs text-muted-foreground">预估耗时（小时）</ContextMenuLabel>
+        <div className="mt-1.5 flex flex-wrap gap-1">
+          {[1, 2, 3, 4, 5, 8].map((h) => {
+            const isSelected = task.estimatedHours === h;
+            return (
+              <button
+                key={h}
+                type="button"
+                onClick={() => updateTask(task.id, { estimatedHours: isSelected ? null : h })}
+                className={cn(
+                  "rounded px-2 py-0.5 text-xs transition-all hover:bg-accent",
+                  isSelected && "bg-primary text-primary-foreground"
+                )}
+              >
+                {h}h
+              </button>
+            );
+          })}
+        </div>
+      </div>
       <div className="px-2 py-1.5">
         <ContextMenuLabel className="px-0 text-xs text-muted-foreground">优先级</ContextMenuLabel>
         <div className="mt-1.5 flex gap-1">
@@ -261,6 +283,15 @@ function SortableTaskRow({
           {task.owner === "agent" && (
             <span className="shrink-0 inline-flex" title={OWNER_LABEL.agent} aria-label={OWNER_LABEL.agent}>
               <Bot className="size-3.5 text-muted-foreground" />
+            </span>
+          )}
+          {task.estimatedHours != null && task.estimatedHours >= 1 && (
+            <span
+              className="shrink-0 inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-xs text-muted-foreground bg-muted/50"
+              title="预估耗时"
+            >
+              <Clock className="size-3" />
+              {task.estimatedHours}h
             </span>
           )}
           <DateTimePickerPopover
@@ -466,6 +497,29 @@ export function TaskList({
             </ContextMenuItem>
             <div className="px-2 py-1.5">
               <ContextMenuLabel className="px-0 text-xs text-muted-foreground">
+                预估耗时（小时）
+              </ContextMenuLabel>
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                {[1, 2, 3, 4, 5, 8].map((h) => {
+                  const isEstSelected = task.estimatedHours === h;
+                  return (
+                    <button
+                      key={h}
+                      type="button"
+                      onClick={() => updateTask(task.id, { estimatedHours: isEstSelected ? null : h })}
+                      className={cn(
+                        "rounded px-2 py-0.5 text-xs transition-all hover:bg-accent",
+                        isEstSelected && "bg-primary text-primary-foreground"
+                      )}
+                    >
+                      {h}h
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="px-2 py-1.5">
+              <ContextMenuLabel className="px-0 text-xs text-muted-foreground">
                 优先级
               </ContextMenuLabel>
               <div className="mt-1.5 flex gap-1">
@@ -601,6 +655,15 @@ export function TaskList({
             {task.owner === "agent" && (
               <span className="shrink-0 inline-flex" title={OWNER_LABEL.agent} aria-label={OWNER_LABEL.agent}>
                 <Bot className="size-3.5 text-muted-foreground" />
+              </span>
+            )}
+            {task.estimatedHours != null && task.estimatedHours >= 1 && (
+              <span
+                className="shrink-0 inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-xs text-muted-foreground bg-muted/50"
+                title="预估耗时"
+              >
+                <Clock className="size-3" />
+                {task.estimatedHours}h
               </span>
             )}
             <DateTimePickerPopover
