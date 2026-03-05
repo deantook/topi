@@ -46,6 +46,7 @@ func (h *TaskHandlers) ListTasks(ctx context.Context, req mcp.CallToolRequest) (
 			"due_date":  t.DueDate,
 			"priority":  t.Priority,
 			"status":    t.Status,
+			"detail":    t.Detail,
 		})
 	}
 	b, _ := json.Marshal(out)
@@ -94,6 +95,11 @@ func (h *TaskHandlers) CreateTasks(ctx context.Context, req mcp.CallToolRequest)
 				inp.Priority = &s
 			}
 		}
+		if v, ok := m["detail"]; ok && v != nil {
+			if s, ok := v.(string); ok {
+				inp.Detail = &s
+			}
+		}
 		inputs = append(inputs, inp)
 	}
 	created, err := h.TaskSvc.BatchCreate(userID, inputs, time.UTC)
@@ -131,7 +137,12 @@ func (h *TaskHandlers) CreateTask(ctx context.Context, req mcp.CallToolRequest) 
 		dp = &dueDate
 	}
 	priority := req.GetString("priority", "none")
-	task, err := h.TaskSvc.Create(userID, title, lp, dp, &priority, nil, time.UTC)
+	detail := req.GetString("detail", "")
+	var dpDetail *string
+	if detail != "" {
+		dpDetail = &detail
+	}
+	task, err := h.TaskSvc.Create(userID, title, lp, dp, &priority, dpDetail, time.UTC)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
@@ -149,7 +160,7 @@ func (h *TaskHandlers) UpdateTask(ctx context.Context, req mcp.CallToolRequest) 
 		return mcp.NewToolResultError(err.Error()), nil
 	}
 	args := req.GetArguments()
-	var title, listID, dueDate, priority *string
+	var title, listID, dueDate, priority, detail *string
 	if _, ok := args["title"]; ok {
 		v := req.GetString("title", "")
 		title = &v
@@ -166,7 +177,11 @@ func (h *TaskHandlers) UpdateTask(ctx context.Context, req mcp.CallToolRequest) 
 		v := req.GetString("priority", "none")
 		priority = &v
 	}
-	if err := h.TaskSvc.Update(userID, id, title, listID, dueDate, priority, nil, time.UTC); err != nil {
+	if _, ok := args["detail"]; ok {
+		v := req.GetString("detail", "")
+		detail = &v
+	}
+	if err := h.TaskSvc.Update(userID, id, title, listID, dueDate, priority, detail, time.UTC); err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
 	return mcp.NewToolResultText("task updated"), nil
