@@ -42,7 +42,7 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
-          source: "docker-compose.yml,topi-web.tar.gz,topi-api.tar.gz"
+          source: "docker-compose.yml,topi-api/.env,topi-web.tar.gz,topi-api.tar.gz"
           target: ${{ secrets.DEPLOY_PATH }}
 
       - name: Load images and deploy
@@ -59,6 +59,7 @@ jobs:
             docker load -i topi-web.tar
             docker load -i topi-api.tar
             rm -f topi-web.tar topi-api.tar
+            cp topi-api/.env .env
             echo "Starting containers..."
             docker compose up -d
             docker image prune -f
