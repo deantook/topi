@@ -1,6 +1,7 @@
 "use client";
 
 import { useSearchParams } from "react-router";
+import { toast } from "sonner";
 import { TaskList } from "@/components/task-list";
 import { TaskDetailPanel } from "@/components/task-detail-panel";
 import { useTasks } from "@/hooks/use-tasks";
@@ -54,7 +55,11 @@ export function TaskPageWithDetail({
         taskId={selectedId}
         task={selectedTask}
         onClose={() => setSelected(null)}
-        onSaveDetail={(id, detail) => updateTask(id, { detail })}
+        onSaveDetail={(id, detail) =>
+          updateTask(id, { detail }).catch(() => {
+            toast.error("保存失败，请重试");
+          })
+        }
       />
     </div>
   );
