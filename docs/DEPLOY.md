@@ -2,7 +2,7 @@
 
 ## GitHub Actions 自动部署（Docker + 密码认证）
 
-推送代码到 `main` 分支或手动触发后，流水线会构建 Docker 镜像并部署到指定服务器。
+推送代码到 `main` 分支或手动触发后，流水线会在 GitHub 上构建镜像、导出为 tar、上传到服务器并加载运行，**服务器无需访问 GitHub/外网**。
 
 ### 1. 配置 GitHub Secrets
 
@@ -39,21 +39,17 @@ CORS_ORIGIN=http://your-domain.com
 EOF
 ```
 
-### 3. 私有镜像拉取（仅私有仓库需配置）
+### 3. 部署流程说明
 
-若仓库为私有，服务器需登录 GitHub Container Registry 才能拉取镜像：
+1. GitHub Actions 构建 `topi-web`、`topi-api` 镜像  
+2. 导出为 tar 并 gzip 压缩  
+3. 通过 SCP 上传到服务器  
+4. 服务器执行 `docker load` 加载镜像  
+5. 执行 `docker compose up -d` 启动容器  
 
-```bash
-echo $GITHUB_PAT | docker login ghcr.io -u YOUR_GITHUB_USER --password-stdin
-```
+服务器只需能接受 SSH 连接，**不需访问 GitHub 或外网拉取镜像**。
 
-将 `GITHUB_PAT`（GitHub Personal Access Token，需 `read:packages` 权限）和 `YOUR_GITHUB_USER` 替换为实际值。
-
-### 4. 镜像地址说明
-
-流水线将镜像推送到 `ghcr.io/<owner>/topi-web` 和 `ghcr.io/<owner>/topi-api`，其中 `<owner>` 为仓库所属用户或组织。
-
-### 5. 端口说明
+### 4. 端口说明
 
 - **3000**：前端（topi-web）
 - **8080**：API（topi-api）

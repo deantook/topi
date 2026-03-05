@@ -1,8 +1,7 @@
-# 生产部署 - 服务器上需创建 .env 配置 DB_DSN、IMAGE_PREFIX 等
-# IMAGE_PREFIX 由部署脚本自动设置，如 ghcr.io/owner/repo
+# 生产部署 - 服务器上需创建 .env 配置 DB_DSN 等
 services:
   topi-api:
-    image: ${IMAGE_PREFIX}/topi-api:latest
+    image: topi-api:latest
     restart: unless-stopped
     env_file: .env
     environment:
@@ -12,7 +11,7 @@ services:
       - "8080:8080"
 
   topi-web:
-    image: ${IMAGE_PREFIX}/topi-web:latest
+    image: topi-web:latest
     restart: unless-stopped
     environment:
       - NODE_ENV=production
