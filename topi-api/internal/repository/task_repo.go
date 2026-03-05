@@ -17,6 +17,26 @@ func (r *TaskRepository) Create(t *model.Task) error {
 	return r.db.Create(t).Error
 }
 
+// RunInTransaction runs fn inside r.db.Transaction.
+func (r *TaskRepository) RunInTransaction(fn func(tx *gorm.DB) error) error {
+	return r.db.Transaction(fn)
+}
+
+// CreateWithTx creates task using tx.Create(t).
+func (r *TaskRepository) CreateWithTx(tx *gorm.DB, t *model.Task) error {
+	return tx.Create(t).Error
+}
+
+// GetMaxOrderWithTx returns max sort_order + 1 for userID. First task gets 0 when empty.
+func (r *TaskRepository) GetMaxOrderWithTx(tx *gorm.DB, userID string) (int, error) {
+	var maxOrder int
+	err := tx.Model(&model.Task{}).Where("user_id = ?", userID).Select("COALESCE(MAX(sort_order), -1)").Scan(&maxOrder).Error
+	if err != nil {
+		return 0, err
+	}
+	return maxOrder + 1, nil
+}
+
 func (r *TaskRepository) ListByUserID(userID string, filter string, listID *string) ([]model.Task, error) {
 	q := r.db.Where("user_id = ?", userID)
 
