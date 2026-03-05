@@ -111,7 +111,11 @@
 
 ---
 
-## 实施顺序
+## 实施计划
+
+详见 `docs/plans/2026-03-05-frontend-backend-request-optimization-implementation.md`
+
+## 实施顺序概要
 
 1. 后端：实现 dashboard 接口
 2. 前端：引入 React Query，实现 dashboard query，替换 useTaskCounts / useCustomLists
