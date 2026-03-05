@@ -20,6 +20,8 @@ import {
   Trash2,
   Calendar,
   Flag,
+  User,
+  Bot,
 } from "lucide-react";
 import { AddTaskInput } from "./add-task-input";
 import { DateTimePickerPopover } from "./datetime-picker";
@@ -40,6 +42,7 @@ import {
   PRIORITY_LABEL,
   PRIORITY_FLAG_CLASS,
   PRIORITY_CHECKBOX_CLASS,
+  OWNER_LABEL,
 } from "@/lib/task-constants";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -247,6 +250,16 @@ function SortableTaskRow({
           {showListName && task.listId && (
             <span className="shrink-0 rounded px-1.5 py-0.5 text-xs text-muted-foreground bg-muted/50">
               {getList(task.listId)?.name ?? "·"}
+            </span>
+          )}
+          {task.owner === "human" && (
+            <span className="shrink-0 inline-flex" title={OWNER_LABEL.human} aria-label={OWNER_LABEL.human}>
+              <User className="size-3.5 text-muted-foreground" />
+            </span>
+          )}
+          {task.owner === "agent" && (
+            <span className="shrink-0 inline-flex" title={OWNER_LABEL.agent} aria-label={OWNER_LABEL.agent}>
+              <Bot className="size-3.5 text-muted-foreground" />
             </span>
           )}
           <DateTimePickerPopover
@@ -551,11 +564,31 @@ export function TaskList({
             {task.title}
           </span>
         )}
+        {mode !== "default" && task.owner === "human" && (
+          <span className="shrink-0 inline-flex" title={OWNER_LABEL.human} aria-label={OWNER_LABEL.human}>
+            <User className="size-3.5 text-muted-foreground" />
+          </span>
+        )}
+        {mode !== "default" && task.owner === "agent" && (
+          <span className="shrink-0 inline-flex" title={OWNER_LABEL.agent} aria-label={OWNER_LABEL.agent}>
+            <Bot className="size-3.5 text-muted-foreground" />
+          </span>
+        )}
         {mode === "default" && (
           <>
             {showListName && task.listId && (
               <span className="shrink-0 rounded px-1.5 py-0.5 text-xs text-muted-foreground bg-muted/50">
                 {getList(task.listId)?.name ?? "·"}
+              </span>
+            )}
+            {task.owner === "human" && (
+              <span className="shrink-0 inline-flex" title={OWNER_LABEL.human} aria-label={OWNER_LABEL.human}>
+                <User className="size-3.5 text-muted-foreground" />
+              </span>
+            )}
+            {task.owner === "agent" && (
+              <span className="shrink-0 inline-flex" title={OWNER_LABEL.agent} aria-label={OWNER_LABEL.agent}>
+                <Bot className="size-3.5 text-muted-foreground" />
               </span>
             )}
             <DateTimePickerPopover

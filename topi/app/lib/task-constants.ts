@@ -1,5 +1,12 @@
 import type { TaskPriority } from "@/hooks/use-tasks";
 
+export type TaskOwner = "human" | "agent" | null;
+
+export const OWNER_LABEL: Record<NonNullable<TaskOwner>, string> = {
+  human: "我",
+  agent: "Agent",
+};
+
 export const PRIORITY_LABEL: Record<TaskPriority, string> = {
   high: "高",
   medium: "中",
