@@ -39,6 +39,7 @@ func NewMCPServer(cfg *config.Config, taskH *handlers.TaskHandlers, listH *handl
 			mcp.WithString("date", mcp.Description("Date filter")),
 			mcp.WithString("startDate", mcp.Description("Start date filter")),
 			mcp.WithString("endDate", mcp.Description("End date filter")),
+			mcp.WithString("owner", mcp.Description("Filter by owner: human, agent, or all")),
 		),
 		taskH.ListTasks,
 	)
@@ -50,13 +51,15 @@ func NewMCPServer(cfg *config.Config, taskH *handlers.TaskHandlers, listH *handl
 			mcp.WithString("dueDate", mcp.Description("Optional due date")),
 			mcp.WithString("priority", mcp.DefaultString("none")),
 			mcp.WithString("detail", mcp.Description("Optional task detail (Markdown)")),
+			mcp.WithString("owner", mcp.Description("Optional: human or agent")),
+			mcp.WithString("estimatedHours", mcp.Description("Optional estimated hours (positive integer)")),
 		),
 		taskH.CreateTask,
 	)
 	s.AddTool(
 		mcp.NewTool("topi_create_tasks",
 			mcp.WithDescription("Create multiple tasks at once"),
-			mcp.WithString("tasks", mcp.Required(), mcp.Description("JSON array of {title, listId?, dueDate?, priority?, detail?}")),
+			mcp.WithString("tasks", mcp.Required(), mcp.Description("JSON array of {title, listId?, dueDate?, priority?, detail?, owner?, estimatedHours?}")),
 		),
 		taskH.CreateTasks,
 	)
@@ -69,6 +72,8 @@ func NewMCPServer(cfg *config.Config, taskH *handlers.TaskHandlers, listH *handl
 			mcp.WithString("dueDate", mcp.Description("New due date")),
 			mcp.WithString("priority", mcp.Description("New priority")),
 			mcp.WithString("detail", mcp.Description("New task detail (Markdown)")),
+			mcp.WithString("owner", mcp.Description("New owner: human or agent")),
+			mcp.WithString("estimatedHours", mcp.Description("New estimated hours (positive integer)")),
 		),
 		taskH.UpdateTask,
 	)

@@ -58,6 +58,28 @@ func formatUTCToLocal(utcStr string, loc *time.Location) string {
 
 var ErrTaskNotFound = errors.New("task not found")
 
+// ValidateEstimatedHours returns (value, nil) if valid positive int, or (nil, error) if invalid.
+func ValidateEstimatedHours(v interface{}) (*int, error) {
+	if v == nil {
+		return nil, nil
+	}
+	switch x := v.(type) {
+	case float64:
+		i := int(x)
+		if float64(i) != x || i < 1 {
+			return nil, errors.New("estimated_hours 需为正整数")
+		}
+		return &i, nil
+	case int:
+		if x < 1 {
+			return nil, errors.New("estimated_hours 需为正整数")
+		}
+		return &x, nil
+	default:
+		return nil, errors.New("estimated_hours 需为正整数")
+	}
+}
+
 // DashboardCounts holds task counts per filter for the dashboard API.
 type DashboardCounts struct {
 	All         int            `json:"all"`
@@ -139,12 +161,13 @@ func (s *TaskService) GetCounts(userID string, loc *time.Location) (*DashboardCo
 
 // BatchTaskInput is input for a single task in batch create.
 type BatchTaskInput struct {
-	Title    string
-	ListID   *string
-	DueDate  *string
-	Priority *string
-	Detail   *string
-	Owner    *string
+	Title           string
+	ListID          *string
+	DueDate         *string
+	Priority        *string
+	Detail          *string
+	Owner           *string
+	EstimatedHours  *int
 }
 
 type TaskService struct {
@@ -155,7 +178,7 @@ func NewTaskService(repo *repository.TaskRepository) *TaskService {
 	return &TaskService{repo: repo}
 }
 
-func (s *TaskService) Create(userID string, title string, listID *string, dueDate *string, priority *string, detail *string, owner *model.TaskOwner, loc *time.Location) (*model.Task, error) {
+func (s *TaskService) Create(userID string, title string, listID *string, dueDate *string, priority *string, detail *string, owner *model.TaskOwner, estimatedHours *int, loc *time.Location) (*model.Task, error) {
 	tasks, _ := s.repo.ListByUserID(userID, "all", nil, nil)
 	maxOrder := 0
 	for _, t := range tasks {
@@ -173,6 +196,9 @@ func (s *TaskService) Create(userID string, title string, listID *string, dueDat
 	if owner == nil {
 		owner = model.TaskOwnerHumanPtr()
 	}
+	if estimatedHours != nil && *estimatedHours < 1 {
+		return nil, errors.New("estimated_hours 需为正整数")
+	}
 	var normalizedDue *string
 	if dueDate != nil && *dueDate != "" {
 		localStr := normalizeDateTimeString(*dueDate)
@@ -183,15 +209,16 @@ func (s *TaskService) Create(userID string, title string, listID *string, dueDat
 		normalizedDue = &utcStr
 	}
 	t := &model.Task{
-		UserID:   userID,
-		Title:    title,
-		ListID:   listID,
-		Detail:   detail,
-		DueDate:  normalizedDue,
-		Priority: prio,
-		Status:   model.TaskStatusActive,
-		Owner:    owner,
-		Order:    maxOrder + 1,
+		UserID:         userID,
+		Title:          title,
+		ListID:         listID,
+		Detail:         detail,
+		DueDate:        normalizedDue,
+		Priority:       prio,
+		Status:         model.TaskStatusActive,
+		Owner:          owner,
+		EstimatedHours: estimatedHours,
+		Order:          maxOrder + 1,
 	}
 	if err := s.repo.Create(t); err != nil {
 		return nil, err
@@ -210,12 +237,13 @@ func (s *TaskService) BatchCreate(userID string, tasks []BatchTaskInput, default
 
 	// Pre-validate and normalize inputs
 	type validatedTask struct {
-		title    string
-		listID   *string
-		dueDate  *string
-		priority model.TaskPriority
-		detail   *string
-		owner    *model.TaskOwner
+		title          string
+		listID         *string
+		dueDate        *string
+		priority       model.TaskPriority
+		detail         *string
+		owner          *model.TaskOwner
+		estimatedHours *int
 	}
 	validated := make([]validatedTask, len(tasks))
 	for i, inp := range tasks {
@@ -252,6 +280,12 @@ func (s *TaskService) BatchCreate(userID string, tasks []BatchTaskInput, default
 		} else {
 			validated[i].owner = defaultOwner
 		}
+		if inp.EstimatedHours != nil {
+			if *inp.EstimatedHours < 1 {
+				return nil, fmt.Errorf("task[%d].estimatedHours: invalid (must be positive integer)", i)
+			}
+			validated[i].estimatedHours = inp.EstimatedHours
+		}
 	}
 
 	var created []*model.Task
@@ -262,15 +296,16 @@ func (s *TaskService) BatchCreate(userID string, tasks []BatchTaskInput, default
 		}
 		for i, v := range validated {
 			t := &model.Task{
-				UserID:   userID,
-				Title:    v.title,
-				ListID:   v.listID,
-				Detail:   v.detail,
-				DueDate:  v.dueDate,
-				Priority: v.priority,
-				Status:   model.TaskStatusActive,
-				Owner:    v.owner,
-				Order:    startOrder + i,
+				UserID:         userID,
+				Title:          v.title,
+				ListID:         v.listID,
+				Detail:         v.detail,
+				DueDate:        v.dueDate,
+				Priority:       v.priority,
+				Status:         model.TaskStatusActive,
+				Owner:          v.owner,
+				EstimatedHours: v.estimatedHours,
+				Order:          startOrder + i,
 			}
 			if err := s.repo.CreateWithTx(tx, t); err != nil {
 				return err
@@ -336,7 +371,7 @@ func (s *TaskService) List(userID, filter string, listID *string, owner *string,
 	return tasks, nil
 }
 
-func (s *TaskService) Update(userID, id string, title *string, listID *string, dueDate *string, priority *string, detail *string, owner *string, loc *time.Location) error {
+func (s *TaskService) Update(userID, id string, title *string, listID *string, dueDate *string, priority *string, detail *string, owner *string, estimatedHours *int, loc *time.Location) error {
 	if _, err := s.repo.GetByIDAndUserID(id, userID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return ErrTaskNotFound
@@ -380,6 +415,12 @@ func (s *TaskService) Update(userID, id string, title *string, listID *string, d
 		default:
 			return errors.New("owner must be 'human' or 'agent'")
 		}
+	}
+	if estimatedHours != nil {
+		if *estimatedHours < 1 {
+			return errors.New("estimated_hours 需为正整数")
+		}
+		fields["estimated_hours"] = *estimatedHours
 	}
 	return s.repo.UpdateFields(id, userID, fields)
 }

@@ -20,6 +20,7 @@ func formatTaskForResponse(t model.Task, loc *time.Location) map[string]interfac
 		"id": t.ID, "list_id": t.ListID, "title": t.Title,
 		"completed": t.Completed, "priority": t.Priority, "status": t.Status,
 		"sort_order": t.Order, "detail": t.Detail, "owner": t.Owner,
+		"estimated_hours": t.EstimatedHours,
 	}
 	m["created_at"] = t.CreatedAt.In(loc).Format(timezone.Layout)
 	if t.DueDate != nil {
@@ -73,12 +74,13 @@ func (h *TaskHandler) List(c *gin.Context) {
 }
 
 type CreateTaskReq struct {
-	Title    string   `json:"title" binding:"required"`
-	ListID   *string  `json:"listId"`
-	DueDate  *string  `json:"dueDate"`
-	Priority *string  `json:"priority"`
-	Detail   *string  `json:"detail"`
-	Owner    *string  `json:"owner"`
+	Title           string  `json:"title" binding:"required"`
+	ListID          *string `json:"listId"`
+	DueDate         *string `json:"dueDate"`
+	Priority        *string `json:"priority"`
+	Detail          *string `json:"detail"`
+	Owner           *string `json:"owner"`
+	EstimatedHours  *int    `json:"estimated_hours"`
 }
 
 type CreateTasksBatchReq struct {
@@ -102,7 +104,7 @@ func (h *TaskHandler) Create(c *gin.Context) {
 	if req.Owner != nil && *req.Owner == "agent" {
 		owner = model.TaskOwnerAgentPtr()
 	}
-	t, err := h.svc.Create(userID, req.Title, req.ListID, req.DueDate, req.Priority, req.Detail, owner, loc)
+	t, err := h.svc.Create(userID, req.Title, req.ListID, req.DueDate, req.Priority, req.Detail, owner, req.EstimatedHours, loc)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -136,12 +138,13 @@ func (h *TaskHandler) CreateBatch(c *gin.Context) {
 	inputs := make([]service.BatchTaskInput, len(req.Tasks))
 	for i, t := range req.Tasks {
 		inputs[i] = service.BatchTaskInput{
-			Title:    t.Title,
-			ListID:   t.ListID,
-			DueDate:  t.DueDate,
-			Priority: t.Priority,
-			Detail:   t.Detail,
-			Owner:    t.Owner,
+			Title:          t.Title,
+			ListID:         t.ListID,
+			DueDate:        t.DueDate,
+			Priority:       t.Priority,
+			Detail:         t.Detail,
+			Owner:          t.Owner,
+			EstimatedHours: t.EstimatedHours,
 		}
 	}
 	var loc *time.Location
@@ -163,12 +166,13 @@ func (h *TaskHandler) CreateBatch(c *gin.Context) {
 }
 
 type UpdateTaskReq struct {
-	Title    *string `json:"title"`
-	ListID   *string `json:"listId"`
-	DueDate  *string `json:"dueDate"`
-	Priority *string `json:"priority"`
-	Detail   *string `json:"detail"`
-	Owner    *string `json:"owner"`
+	Title          *string `json:"title"`
+	ListID         *string `json:"listId"`
+	DueDate        *string `json:"dueDate"`
+	Priority       *string `json:"priority"`
+	Detail         *string `json:"detail"`
+	Owner          *string `json:"owner"`
+	EstimatedHours *int    `json:"estimated_hours"`
 }
 
 func (h *TaskHandler) Update(c *gin.Context) {
@@ -185,7 +189,7 @@ func (h *TaskHandler) Update(c *gin.Context) {
 			loc = l
 		}
 	}
-	if err := h.svc.Update(userID, id, req.Title, req.ListID, req.DueDate, req.Priority, req.Detail, req.Owner, loc); err != nil {
+	if err := h.svc.Update(userID, id, req.Title, req.ListID, req.DueDate, req.Priority, req.Detail, req.Owner, req.EstimatedHours, loc); err != nil {
 		if err == service.ErrTaskNotFound {
 			response.Error(c, http.StatusNotFound, "task not found")
 			return
