@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
   DndContext,
   PointerSensor,
@@ -81,11 +81,14 @@ function formatDueDate(dateStr: string | null, refDate = new Date()): string | n
   return `${taskYear}年${parseInt(m, 10)}月${parseInt(d, 10)}日`;
 }
 
+const CLICK_DELAY_MS = 250;
+
 function SortableTaskRow({
   task,
   mode,
   isEditing,
   isHovered,
+  isSelected,
   editingText,
   editingDueDateId,
   showListName,
@@ -100,11 +103,13 @@ function SortableTaskRow({
   updateTask,
   getList,
   setEditingText,
+  onSelectTask,
 }: {
   task: Task;
   mode: "default" | "completed" | "abandoned" | "trash";
   isEditing: boolean;
   isHovered: boolean;
+  isSelected: boolean;
   editingText: string;
   editingDueDateId: string | null;
   showListName: boolean;
@@ -119,7 +124,27 @@ function SortableTaskRow({
   updateTask: (id: string, updates: Partial<Pick<Task, "title" | "dueDate" | "listId" | "priority">>) => void;
   getList: (id: string) => { name: string } | undefined;
   setEditingText: (s: string) => void;
+  onSelectTask?: (id: string | null) => void;
 }) {
+  const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleClick = useCallback(() => {
+    if (!onSelectTask || mode !== "default") return;
+    if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current);
+    clickTimeoutRef.current = setTimeout(() => {
+      clickTimeoutRef.current = null;
+      onSelectTask(task.id);
+    }, CLICK_DELAY_MS);
+  }, [onSelectTask, mode, task.id]);
+
+  const handleDoubleClick = useCallback(() => {
+    if (clickTimeoutRef.current) {
+      clearTimeout(clickTimeoutRef.current);
+      clickTimeoutRef.current = null;
+    }
+    if (mode === "default" && !task.completed) handleEditStart(task);
+  }, [mode, task, handleEditStart]);
+
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
   });
@@ -177,12 +202,14 @@ function SortableTaskRow({
           style={style}
           className={cn(
             "group flex items-center gap-2 px-2 py-2 transition-colors cursor-text",
-            isHovered && "bg-muted/50",
+            (isHovered || isSelected) && "bg-muted/50",
+            isSelected && "bg-muted/70",
             isDragging && "opacity-90 shadow-md z-10"
           )}
           onMouseEnter={() => setHoverId(task.id)}
           onMouseLeave={() => setHoverId(null)}
-          onDoubleClick={() => !task.completed && handleEditStart(task)}
+          onClick={handleClick}
+          onDoubleClick={handleDoubleClick}
         >
           <div
             {...listeners}
@@ -374,9 +401,35 @@ export function TaskList({
     [mode, deleteTask]
   );
 
+  const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleRowClick = useCallback(
+    (taskId: string) => {
+      if (!onSelectTask || mode !== "default") return;
+      if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current);
+      clickTimeoutRef.current = setTimeout(() => {
+        clickTimeoutRef.current = null;
+        onSelectTask(taskId);
+      }, CLICK_DELAY_MS);
+    },
+    [onSelectTask, mode]
+  );
+
+  const handleRowDoubleClick = useCallback(
+    (task: Task) => {
+      if (clickTimeoutRef.current) {
+        clearTimeout(clickTimeoutRef.current);
+        clickTimeoutRef.current = null;
+      }
+      if (mode === "default" && !task.completed) handleEditStart(task);
+    },
+    [mode, handleEditStart]
+  );
+
   const renderTaskItem = (task: Task) => {
     const isEditing = editingId === task.id;
     const isHovered = hoverId === task.id;
+    const isSelected = selectedId === task.id;
 
     const contextMenuContent = (
       <ContextMenuContent className="w-40">
@@ -453,11 +506,13 @@ export function TaskList({
         key={task.id}
         className={cn(
           "group flex items-center gap-2 px-2 py-2 transition-colors cursor-text",
-          isHovered && "bg-muted/50"
+          (isHovered || isSelected) && "bg-muted/50",
+          isSelected && "bg-muted/70"
         )}
         onMouseEnter={() => setHoverId(task.id)}
         onMouseLeave={() => setHoverId(null)}
-        onDoubleClick={() => mode === "default" && !task.completed && handleEditStart(task)}
+        onClick={() => handleRowClick(task.id)}
+        onDoubleClick={() => handleRowDoubleClick(task)}
       >
         {mode === "default" && (
           <GripVertical
@@ -583,6 +638,7 @@ export function TaskList({
                   mode={mode}
                   isEditing={editingId === task.id}
                   isHovered={hoverId === task.id}
+                  isSelected={selectedId === task.id}
                   editingText={editingText}
                   editingDueDateId={editingDueDateId}
                   showListName={showListName}
@@ -597,6 +653,7 @@ export function TaskList({
                   updateTask={updateTask}
                   getList={getList}
                   setEditingText={setEditingText}
+                  onSelectTask={onSelectTask}
                 />
                 </div>
               ))}
