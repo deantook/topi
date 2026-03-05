@@ -1,5 +1,5 @@
 import type { Route } from "./+types/recent-seven";
-import { TaskList } from "@/components/task-list";
+import { TaskPageWithDetail } from "@/components/task-page-with-detail";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -9,9 +9,5 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export default function RecentSeven() {
-  return (
-    <div className="max-w-2xl">
-      <TaskList title="最近七天" filter="recent-seven" />
-    </div>
-  );
+  return <TaskPageWithDetail title="最近七天" filter="recent-seven" />;
 }

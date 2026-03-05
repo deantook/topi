@@ -1,6 +1,6 @@
 import { useParams } from "react-router";
 import { useCustomLists } from "@/hooks/use-custom-lists";
-import { TaskList } from "@/components/task-list";
+import { TaskPageWithDetail } from "@/components/task-page-with-detail";
 
 export function meta() {
   return [
@@ -32,12 +32,5 @@ export default function ListPage() {
     );
   }
 
-  return (
-    <div className="max-w-2xl">
-      <TaskList
-        title={list.name}
-        filter={{ listId }}
-      />
-    </div>
-  );
+  return <TaskPageWithDetail title={list.name} filter={{ listId }} />;
 }

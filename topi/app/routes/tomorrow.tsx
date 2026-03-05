@@ -1,5 +1,5 @@
 import type { Route } from "./+types/tomorrow";
-import { TaskList } from "@/components/task-list";
+import { TaskPageWithDetail } from "@/components/task-page-with-detail";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -9,9 +9,5 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export default function Tomorrow() {
-  return (
-    <div className="max-w-2xl">
-      <TaskList title="明天" filter="tomorrow" />
-    </div>
-  );
+  return <TaskPageWithDetail title="明天" filter="tomorrow" />;
 }

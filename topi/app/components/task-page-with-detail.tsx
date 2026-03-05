@@ -1,0 +1,61 @@
+"use client";
+
+import { useSearchParams } from "react-router";
+import { TaskList } from "@/components/task-list";
+import { TaskDetailPanel } from "@/components/task-detail-panel";
+import { useTasks } from "@/hooks/use-tasks";
+import type { TaskFilter } from "@/hooks/use-tasks";
+
+export interface TaskPageWithDetailProps {
+  title: string;
+  filter: TaskFilter;
+  showSort?: boolean;
+  showAddInput?: boolean;
+  mode?: "default" | "completed" | "abandoned" | "trash";
+}
+
+export function TaskPageWithDetail({
+  title,
+  filter,
+  showSort = true,
+  showAddInput = true,
+  mode = "default",
+}: TaskPageWithDetailProps) {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedId = searchParams.get("selected");
+
+  const tasksHook = useTasks(filter);
+  const { tasks, updateTask } = tasksHook;
+  const selectedTask = selectedId ? tasks.find((t) => t.id === selectedId) ?? null : null;
+
+  const setSelected = (id: string | null) => {
+    if (id) {
+      setSearchParams({ selected: id });
+    } else {
+      setSearchParams({});
+    }
+  };
+
+  return (
+    <div className="flex min-w-0 flex-1 gap-4">
+      <div className="min-w-0 flex-1 max-w-[67rem]">
+        <TaskList
+          title={title}
+          filter={filter}
+          showSort={showSort}
+          showAddInput={showAddInput}
+          mode={mode}
+          selectedId={selectedId}
+          onSelectTask={setSelected}
+          tasksSource={tasksHook}
+        />
+      </div>
+      <TaskDetailPanel
+        taskId={selectedId}
+        task={selectedTask}
+        onClose={() => setSelected(null)}
+        onSaveDetail={(id, detail) => updateTask(id, { detail })}
+      />
+    </div>
+  );
+}

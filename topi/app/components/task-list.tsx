@@ -249,6 +249,8 @@ function SortableTaskRow({
   );
 }
 
+type TasksSource = ReturnType<typeof useTasks>;
+
 export interface TaskListProps {
   title: string;
   filter: TaskFilter;
@@ -258,6 +260,12 @@ export interface TaskListProps {
   showAddInput?: boolean;
   /** 完成模式：completed/abandoned/trash 页面隐藏添加框，且 checkbox 行为不同 */
   mode?: "default" | "completed" | "abandoned" | "trash";
+  /** 当前选中的任务 ID，用于详情面板 */
+  selectedId?: string | null;
+  /** 单击任务时选中，用于打开详情面板 */
+  onSelectTask?: (id: string | null) => void;
+  /** 可选：来自父组件的 useTasks 结果，用于共享同一数据源（如 TaskPageWithDetail） */
+  tasksSource?: TasksSource;
 }
 
 const SKELETON_DELAY_MS = 200;
@@ -268,9 +276,13 @@ export function TaskList({
   showSort = true,
   showAddInput = true,
   mode = "default",
+  selectedId,
+  onSelectTask,
+  tasksSource,
 }: TaskListProps) {
+  const fallback = useTasks(filter);
   const { tasks, addTask, toggleTask, updateTask, deleteTask, abandonTask, restoreTask, reorderTasks, isLoading } =
-    useTasks(filter);
+    tasksSource ?? fallback;
   const [showSkeleton, setShowSkeleton] = useState(false);
   useEffect(() => {
     if (!isLoading) {
