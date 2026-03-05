@@ -32,9 +32,8 @@ jobs:
 
       - name: Save images to tar
         run: |
-          docker save topi-web:latest -o topi-web.tar
-          docker save topi-api:latest -o topi-api.tar
-          gzip topi-web.tar topi-api.tar
+          docker save topi-web:latest | gzip > topi-web.tar.gz
+          docker save topi-api:latest | gzip > topi-api.tar.gz
           ls -la *.tar.gz
 
       - name: Copy files to server
