@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -57,6 +58,14 @@ func formatUTCToLocal(utcStr string, loc *time.Location) string {
 
 var ErrTaskNotFound = errors.New("task not found")
 
+// BatchTaskInput is input for a single task in batch create.
+type BatchTaskInput struct {
+	Title    string
+	ListID   *string
+	DueDate  *string
+	Priority *string
+}
+
 type TaskService struct {
 	repo *repository.TaskRepository
 }
@@ -102,6 +111,79 @@ func (s *TaskService) Create(userID string, title string, listID *string, dueDat
 		return nil, err
 	}
 	return t, nil
+}
+
+// BatchCreate creates multiple tasks in a transaction. Returns error on validation failure or DB error.
+func (s *TaskService) BatchCreate(userID string, tasks []BatchTaskInput, loc *time.Location) ([]*model.Task, error) {
+	if len(tasks) == 0 {
+		return nil, errors.New("at least one task required")
+	}
+	if loc == nil {
+		loc = time.UTC
+	}
+
+	// Pre-validate and normalize inputs
+	type validatedTask struct {
+		title    string
+		listID   *string
+		dueDate  *string
+		priority model.TaskPriority
+	}
+	validated := make([]validatedTask, len(tasks))
+	for i, inp := range tasks {
+		if strings.TrimSpace(inp.Title) == "" {
+			return nil, fmt.Errorf("task[%d].title: required", i)
+		}
+		validated[i].title = strings.TrimSpace(inp.Title)
+		validated[i].listID = inp.ListID
+
+		if inp.DueDate != nil && *inp.DueDate != "" {
+			localStr := normalizeDateTimeString(*inp.DueDate)
+			utcStr, err := parseLocalToUTC(localStr, loc)
+			if err != nil {
+				return nil, fmt.Errorf("task[%d].dueDate: invalid format", i)
+			}
+			validated[i].dueDate = &utcStr
+		}
+
+		validated[i].priority = model.TaskPriorityNone
+		if inp.Priority != nil && *inp.Priority != "" {
+			switch *inp.Priority {
+			case "none", "low", "medium", "high":
+				validated[i].priority = model.TaskPriority(*inp.Priority)
+			default:
+				return nil, fmt.Errorf("task[%d].priority: invalid value", i)
+			}
+		}
+	}
+
+	var created []*model.Task
+	err := s.repo.RunInTransaction(func(tx *gorm.DB) error {
+		startOrder, err := s.repo.GetMaxOrderWithTx(tx, userID)
+		if err != nil {
+			return err
+		}
+		for i, v := range validated {
+			t := &model.Task{
+				UserID:   userID,
+				Title:    v.title,
+				ListID:   v.listID,
+				DueDate:  v.dueDate,
+				Priority: v.priority,
+				Status:   model.TaskStatusActive,
+				Order:    startOrder + i,
+			}
+			if err := s.repo.CreateWithTx(tx, t); err != nil {
+				return err
+			}
+			created = append(created, t)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return created, nil
 }
 
 func (s *TaskService) List(userID, filter string, listID *string, date, startDate, endDate string, loc *time.Location) ([]model.Task, error) {
