@@ -30,7 +30,7 @@ func Load() (*Config, error) {
 		JWTSecret:      getEnv("JWT_SECRET", ""),
 		JWTExpireHours: hours,
 		GinMode:        getEnv("GIN_MODE", "debug"),
-		CORSOrigin:     getEnv("CORS_ORIGIN", "http://localhost:5173"),
+		CORSOrigin:     getEnv("CORS_ORIGIN", "*"),
 	}
 	return cfg, nil
 }

@@ -4,7 +4,7 @@ import { TaskList } from "@/components/task-list";
 
 export function meta() {
   return [
-    { title: "清单" },
+    { title: "待办清单" },
     { name: "description", content: "自定义清单" },
   ];
 }

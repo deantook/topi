@@ -1,30 +1,20 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import { Calendar as CalendarIcon, Flag, Plus } from "lucide-react";
+import { CalendarClock, Flag, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Calendar } from "@/components/ui/calendar";
+import { DateTimePickerPopover } from "@/components/datetime-picker";
+import { formatDueDateForDisplay } from "@/lib/date-utils";
 import type { TaskFilter, TaskPriority } from "@/hooks/use-tasks";
 import { PRIORITY_LABEL, PRIORITY_FLAG_CLASS } from "@/lib/task-constants";
 import { cn } from "@/lib/utils";
-
-const HH_MM_REGEX = /^([01]?\d|2[0-3]):([0-5]\d)$/;
-
-function isValidTime(value: string): boolean {
-  return HH_MM_REGEX.test(value) || value === "";
-}
 
 export interface AddTaskInputProps {
   filter: TaskFilter;
@@ -32,15 +22,6 @@ export interface AddTaskInputProps {
     text: string,
     options?: { listId?: string; dueDate?: string; priority?: TaskPriority }
   ) => void;
-}
-
-function formatDueDateForDisplay(dateStr: string): string {
-  if (!dateStr) return "";
-  const [y, m, d] = dateStr.slice(0, 10).split("-");
-  const timePart = dateStr.length >= 19 ? dateStr.slice(11, 16) : null;
-  return timePart
-    ? `${parseInt(m, 10)}月${parseInt(d, 10)}日 ${timePart}`
-    : `${parseInt(m, 10)}月${parseInt(d, 10)}日`;
 }
 
 function isInsideAddTaskControl(el: Element | null): boolean {
@@ -119,98 +100,51 @@ export function AddTaskInput({ filter, onSubmit }: AddTaskInputProps) {
       <div
         ref={containerRef}
         className={cn(
-          "flex items-center gap-2 rounded-lg border border-gray-200 bg-muted/30 pl-3 pr-3 py-2 dark:border-gray-700"
+          "flex items-center gap-2 rounded-lg border border-border bg-background pl-3 pr-3 py-2"
         )}
         onFocusCapture={() => setIsFocused(true)}
         onBlurCapture={handleBlurCapture}
       >
-        <Plus className="size-4 shrink-0 text-muted-foreground text-[rgba(0,0,0,1)]" />
+        <Plus className="size-4 shrink-0 text-muted-foreground" />
         <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="添加任务"
-          className="h-8 flex-1 min-w-0 border-0 bg-transparent px-0 shadow-none text-[rgba(143,146,168,1)] placeholder:text-muted-foreground focus-visible:ring-0"
+          className="h-8 flex-1 min-w-0 border-0 bg-transparent px-2 shadow-none text-foreground placeholder:text-muted-foreground focus-visible:ring-0"
         />
-        {showRightControls && !hideDatePicker && (
-          <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
-            <PopoverTrigger asChild>
+        {showRightControls && (
+          <div className="flex items-center gap-2 shrink-0">
+        {!hideDatePicker && (
+          <DateTimePickerPopover
+            value={addDueDate || null}
+            onChange={(v) => setAddDueDate(v ?? "")}
+            trigger={
               <Button
                 variant="ghost"
-                size="icon-xs"
+                size={addDueDate ? "xs" : "icon-sm"}
                 aria-label="截止日期"
-                className="shrink-0 text-muted-foreground"
+                className="shrink-0 text-muted-foreground gap-1.5"
               >
                 {addDueDate ? (
                   <>
-                    <span className="text-xs">
+                    <span className="text-xs whitespace-nowrap">
                       {formatDueDateForDisplay(addDueDate)}
                     </span>
-                    <CalendarIcon className="size-3" />
+                    <CalendarClock className="size-4 shrink-0" />
                   </>
                 ) : (
-                  <CalendarIcon className="size-3" />
+                  <CalendarClock className="size-4" />
                 )}
               </Button>
-            </PopoverTrigger>
-            <PopoverContent data-add-task-control align="start" className="w-auto p-0">
-              <div className="flex flex-col gap-2 p-2">
-                <Calendar
-                  mode="single"
-                  selected={
-                    addDueDate
-                      ? new Date(addDueDate.slice(0, 10))
-                      : undefined
-                  }
-                  onSelect={(date: Date | undefined) => {
-                    if (!date) return;
-                    const y = date.getFullYear();
-                    const m = String(date.getMonth() + 1).padStart(2, "0");
-                    const d = String(date.getDate()).padStart(2, "0");
-                    const timePart = addDueDate.length >= 16 ? addDueDate.slice(11, 16) : null;
-                    if (timePart && isValidTime(timePart)) {
-                      setAddDueDate(`${y}-${m}-${d} ${timePart}:00`);
-                    } else {
-                      setAddDueDate(`${y}-${m}-${d} 00:00:00`);
-                    }
-                  }}
-                />
-                <div className="flex items-center gap-2 border-t pt-2">
-                  <Input
-                    type="text"
-                    placeholder="00:00"
-                    value={
-                      addDueDate && addDueDate.length >= 16
-                        ? addDueDate.slice(11, 16)
-                        : ""
-                    }
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      const datePart = addDueDate ? addDueDate.slice(0, 10) : null;
-                      if (v === "") {
-                        if (datePart) setAddDueDate(`${datePart} 00:00:00`);
-                        return;
-                      }
-                      if (!isValidTime(v) || !datePart) return;
-                      setAddDueDate(`${datePart} ${v}:00`);
-                    }}
-                    className="h-8 w-20"
-                  />
-                  <Button
-                    variant="ghost"
-                    size="xs"
-                    onClick={() => {
-                      setAddDueDate("");
-                      setDatePopoverOpen(false);
-                    }}
-                  >
-                    清除
-                  </Button>
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
+            }
+            open={datePopoverOpen}
+            onOpenChange={setDatePopoverOpen}
+            contentProps={{
+              "data-add-task-control": true,
+              className: "w-auto p-0 !bg-white dark:!bg-background",
+            }}
+          />
         )}
-        {showRightControls && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -274,6 +208,7 @@ export function AddTaskInput({ filter, onSubmit }: AddTaskInputProps) {
               </div>
             </DropdownMenuContent>
           </DropdownMenu>
+          </div>
         )}
       </div>
     </form>

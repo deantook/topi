@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   DndContext,
   PointerSensor,
@@ -17,12 +17,12 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import {
   GripVertical,
-  MoreHorizontal,
   Trash2,
   Calendar,
   Flag,
 } from "lucide-react";
 import { AddTaskInput } from "./add-task-input";
+import { DateTimePickerPopover } from "./datetime-picker";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,14 +33,6 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import type { Task, TaskFilter, TaskPriority } from "@/hooks/use-tasks";
 import { useTasks } from "@/hooks/use-tasks";
 import { useCustomLists } from "@/hooks/use-custom-lists";
@@ -52,20 +44,41 @@ import {
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
+const WEEKDAY_NAMES = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+
+function getWeekStart(d: Date): Date {
+  const x = new Date(d);
+  const day = x.getDay();
+  x.setDate(x.getDate() - (day === 0 ? 6 : day - 1));
+  return x;
+}
+
 function formatDueDate(dateStr: string | null, refDate = new Date()): string | null {
   if (!dateStr) return null;
   const datePart = dateStr.slice(0, 10);
-  const timePart = dateStr.length >= 19 ? dateStr.slice(11, 16) : null; // HH:mm
   const toLocalDate = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   const today = toLocalDate(refDate);
   const tomorrow = toLocalDate(new Date(refDate.getTime() + 86400000));
-  if (datePart === today) return timePart ? `今天 ${timePart}` : "今天";
-  if (datePart === tomorrow) return timePart ? `明天 ${timePart}` : "明天";
+  const timePart = dateStr.length >= 19 ? dateStr.slice(11, 16) : null;
+  const taskDate = new Date(datePart + "T12:00:00");
+
+  if (datePart === today) return timePart ?? "今天";
+  if (datePart === tomorrow) return "明天";
+
+  const refWeekStart = toLocalDate(getWeekStart(refDate));
+  const taskWeekStart = toLocalDate(getWeekStart(taskDate));
+  if (refWeekStart === taskWeekStart) {
+    return WEEKDAY_NAMES[taskDate.getDay()];
+  }
+
   const [y, m, d] = datePart.split("-");
-  return timePart
-    ? `${parseInt(m, 10)}月${parseInt(d, 10)}日 ${timePart}`
-    : `${parseInt(m, 10)}月${parseInt(d, 10)}日`;
+  const taskYear = parseInt(y, 10);
+  const refYear = refDate.getFullYear();
+  if (taskYear === refYear) {
+    return `${parseInt(m, 10)}月${parseInt(d, 10)}日`;
+  }
+  return `${taskYear}年${parseInt(m, 10)}月${parseInt(d, 10)}日`;
 }
 
 function SortableTaskRow({
@@ -209,73 +222,26 @@ function SortableTaskRow({
               {getList(task.listId)?.name ?? "·"}
             </span>
           )}
-          {task.dueDate && editingDueDateId !== task.id && (
-            <span className="shrink-0 rounded px-1.5 py-0.5 text-xs text-muted-foreground bg-muted/60">
-              {formatDueDate(task.dueDate)}
-            </span>
-          )}
-          {editingDueDateId === task.id ? (
-            <input
-              type="datetime-local"
-              value={task.dueDate ? task.dueDate.replace(" ", "T").slice(0, 16) : ""}
-              onChange={(e) => {
-                const v = e.target.value;
-                updateTask(task.id, { dueDate: v ? v.replace("T", " ") + ":00" : null });
-                setEditingDueDateId(null);
-              }}
-              onBlur={() => setEditingDueDateId(null)}
-              autoFocus
-              className="h-7 rounded border bg-background px-1.5 text-xs"
-            />
-          ) : null}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon-xs" className={cn("shrink-0 opacity-0 group-hover:opacity-100", isHovered && "opacity-100")} aria-label="更多操作">
-                <MoreHorizontal className="size-4" />
+          <DateTimePickerPopover
+            value={task.dueDate ?? null}
+            onChange={(v) => updateTask(task.id, { dueDate: v })}
+            open={editingDueDateId === task.id}
+            onOpenChange={(open) => setEditingDueDateId(open ? task.id : null)}
+            trigger={
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  "shrink-0 h-auto rounded px-1.5 py-0.5 text-xs text-muted-foreground bg-muted/60 hover:bg-muted/80",
+                  !task.dueDate && "invisible min-w-[5rem]"
+                )}
+                aria-label="设置截止日期"
+              >
+                {task.dueDate ? formatDueDate(task.dueDate) : "\u200B"}
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
-              <DropdownMenuItem onClick={() => setEditingDueDateId(task.id)}>
-                <Calendar className="size-4" />
-                截止日期
-              </DropdownMenuItem>
-              <div className="px-2 py-1.5">
-                <DropdownMenuLabel className="px-0 text-xs text-muted-foreground">优先级</DropdownMenuLabel>
-                <div className="mt-1.5 flex gap-1">
-                  {(["high", "medium", "low", "none"] as const).map((p) => {
-                    const isSelected = task.priority === p;
-                    return (
-                      <button
-                        key={p}
-                        type="button"
-                        onClick={() => updateTask(task.id, { priority: p })}
-                        className={cn(
-                          "rounded p-1 transition-all hover:bg-accent",
-                          isSelected && "!bg-neutral-200 dark:!bg-neutral-700",
-                          p === "none" && isSelected ? "text-neutral-500 dark:text-neutral-400" : PRIORITY_FLAG_CLASS[p]
-                        )}
-                        title={PRIORITY_LABEL[p]}
-                        aria-label={PRIORITY_LABEL[p]}
-                        aria-pressed={isSelected}
-                      >
-                        <Flag
-                          className={cn("size-4 transition-transform", p === "none" && !isSelected && "opacity-50", isSelected && "scale-110")}
-                          fill={p === "none" ? "none" : "currentColor"}
-                          strokeWidth={isSelected ? 2 : 1.5}
-                        />
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleDelete(task.id)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
-                <Trash2 className="size-4" />
-                删除
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => abandonTask(task.id)}>放弃</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            }
+          />
         </div>
       </ContextMenuTrigger>
       {contextMenuContent}
@@ -294,6 +260,8 @@ export interface TaskListProps {
   mode?: "default" | "completed" | "abandoned" | "trash";
 }
 
+const SKELETON_DELAY_MS = 200;
+
 export function TaskList({
   title,
   filter,
@@ -303,6 +271,15 @@ export function TaskList({
 }: TaskListProps) {
   const { tasks, addTask, toggleTask, updateTask, deleteTask, abandonTask, restoreTask, reorderTasks, isLoading } =
     useTasks(filter);
+  const [showSkeleton, setShowSkeleton] = useState(false);
+  useEffect(() => {
+    if (!isLoading) {
+      setShowSkeleton(false);
+      return;
+    }
+    const t = setTimeout(() => setShowSkeleton(true), SKELETON_DELAY_MS);
+    return () => clearTimeout(t);
+  }, [isLoading]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -514,114 +491,28 @@ export function TaskList({
                 {getList(task.listId)?.name ?? "·"}
               </span>
             )}
-            {task.dueDate && !editingDueDateId && (
-              <span className="shrink-0 rounded px-1.5 py-0.5 text-xs text-muted-foreground bg-muted/60">
-                {formatDueDate(task.dueDate)}
-              </span>
-            )}
+            <DateTimePickerPopover
+              value={task.dueDate ?? null}
+              onChange={(v) => updateTask(task.id, { dueDate: v })}
+              open={editingDueDateId === task.id}
+              onOpenChange={(open) => setEditingDueDateId(open ? task.id : null)}
+            trigger={
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  "shrink-0 h-auto rounded px-1.5 py-0.5 text-xs text-muted-foreground bg-muted/60 hover:bg-muted/80",
+                  !task.dueDate && "invisible min-w-[5rem]"
+                )}
+                aria-label="设置截止日期"
+              >
+                {task.dueDate ? formatDueDate(task.dueDate) : "\u200B"}
+              </Button>
+            }
+            />
           </>
         )}
-        {editingDueDateId === task.id ? (
-          <input
-            type="datetime-local"
-            value={
-              task.dueDate
-                ? task.dueDate.replace(" ", "T").slice(0, 16)
-                : ""
-            }
-            onChange={(e) => {
-              const v = e.target.value;
-              updateTask(
-                task.id,
-                { dueDate: v ? v.replace("T", " ") + ":00" : null }
-              );
-              setEditingDueDateId(null);
-            }}
-            onBlur={() => setEditingDueDateId(null)}
-            autoFocus
-            className="h-7 rounded border bg-background px-1.5 text-xs"
-          />
-        ) : null}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              className={cn(
-                "shrink-0 opacity-0 transition-opacity group-hover:opacity-100",
-                isHovered && "opacity-100"
-              )}
-              aria-label="更多操作"
-            >
-              <MoreHorizontal className="size-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-40">
-            {mode === "default" && (
-              <>
-                <DropdownMenuItem onClick={() => setEditingDueDateId(task.id)}>
-                  <Calendar className="size-4" />
-                  截止日期
-                </DropdownMenuItem>
-                <div className="px-2 py-1.5">
-                  <DropdownMenuLabel className="px-0 text-xs text-muted-foreground">
-                    优先级
-                  </DropdownMenuLabel>
-                  <div className="mt-1.5 flex gap-1">
-                    {(["high", "medium", "low", "none"] as const).map((p) => {
-                      const isSelected = task.priority === p;
-                      return (
-                        <button
-                          key={p}
-                          type="button"
-                          onClick={() => updateTask(task.id, { priority: p })}
-                          className={cn(
-                            "rounded p-1 transition-all hover:bg-accent",
-                            isSelected && "!bg-neutral-200 dark:!bg-neutral-700",
-                            p === "none" && isSelected
-                              ? "text-neutral-500 dark:text-neutral-400"
-                              : PRIORITY_FLAG_CLASS[p]
-                          )}
-                          title={PRIORITY_LABEL[p]}
-                          aria-label={PRIORITY_LABEL[p]}
-                          aria-pressed={isSelected}
-                        >
-                          <Flag
-                            className={cn(
-                              "size-4 transition-transform",
-                              p === "none" && !isSelected && "opacity-50",
-                              isSelected && "scale-110"
-                            )}
-                            fill={p === "none" ? "none" : "currentColor"}
-                            strokeWidth={isSelected ? 2 : 1.5}
-                          />
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </>
-            )}
-            {(mode === "completed" || mode === "abandoned" || mode === "trash") && (
-              <DropdownMenuItem onClick={() => restoreTask(task.id)}>
-                恢复
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => handleDelete(task.id)}
-              className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-            >
-              <Trash2 className="size-4" />
-              {mode === "trash" ? "永久删除" : "删除"}
-            </DropdownMenuItem>
-            {mode === "default" && (
-              <DropdownMenuItem onClick={() => abandonTask(task.id)}>
-                放弃
-              </DropdownMenuItem>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
         </ContextMenuTrigger>
         {contextMenuContent}
@@ -631,7 +522,7 @@ export function TaskList({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-2 pl-7">
         <h2 className="text-lg font-semibold">{title}</h2>
         {showSort && (
           <Button variant="ghost" size="icon-sm" aria-label="排序">
@@ -648,7 +539,7 @@ export function TaskList({
       )}
 
       <div className="flex flex-col">
-        {isLoading ? (
+        {showSkeleton ? (
           <>
             <Skeleton className="h-10 w-full rounded-none" />
             <Skeleton className="h-10 w-full rounded-none" />
