@@ -21,7 +21,7 @@
 
 **前置条件**：Go 1.25+、Node.js（pnpm）、MySQL；或仅 Docker
 
-### 方式一：Docker 启动
+### 方式一：Docker 启动。
 
 ```bash
 # 在项目根目录配置 .env（DB_DSN、JWT_SECRET 等，参考 docs/DEPLOY.md）
