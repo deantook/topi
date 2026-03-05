@@ -61,10 +61,10 @@ http://localhost:8080/mcp/sse?token=${TOPI_TOKEN}
 
 | 工具 | 说明 | 参数 |
 |------|------|------|
-| `topi_create_task` | 创建任务 | `title`（必填）、`listId`、`dueDate`、`priority`、`detail`（Markdown，可选） |
-| `topi_create_tasks` | 批量创建任务 | `tasks`：JSON 数组，每项 `{title, listId?, dueDate?, priority?, detail?}` |
-| `topi_update_task` | 更新任务 | `id`（必填）、`title`、`listId`、`dueDate`、`priority`、`detail` |
-| `topi_list_tasks` | 列出任务 | 返回含 `detail` 字段 |
+| `topi_create_task` | 创建任务 | `title`（必填）、`listId`、`dueDate`、`priority`、`detail`（Markdown，可选）、`estimatedHours`（整数小时，可选） |
+| `topi_create_tasks` | 批量创建任务 | `tasks`：JSON 数组，每项 `{title, listId?, dueDate?, priority?, detail?, estimatedHours?}` |
+| `topi_update_task` | 更新任务 | `id`（必填）、`title`、`listId`、`dueDate`、`priority`、`detail`、`estimatedHours` |
+| `topi_list_tasks` | 列出任务 | 返回含 `detail`、`estimated_hours` 字段 |
 
 ## 远程部署说明
 
