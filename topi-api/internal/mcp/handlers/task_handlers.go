@@ -78,3 +78,127 @@ func (h *TaskHandlers) CreateTask(ctx context.Context, req mcp.CallToolRequest) 
 	b, _ := json.Marshal(map[string]interface{}{"id": task.ID, "title": task.Title})
 	return mcp.NewToolResultText(string(b)), nil
 }
+
+func (h *TaskHandlers) UpdateTask(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	userID := topimcp.UserIDFromContext(ctx)
+	if userID == "" {
+		return mcp.NewToolResultError("unauthorized"), nil
+	}
+	id, err := req.RequireString("id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	args := req.GetArguments()
+	var title, listID, dueDate, priority *string
+	if _, ok := args["title"]; ok {
+		v := req.GetString("title", "")
+		title = &v
+	}
+	if _, ok := args["listId"]; ok {
+		v := req.GetString("listId", "")
+		listID = &v
+	}
+	if _, ok := args["dueDate"]; ok {
+		v := req.GetString("dueDate", "")
+		dueDate = &v
+	}
+	if _, ok := args["priority"]; ok {
+		v := req.GetString("priority", "none")
+		priority = &v
+	}
+	if err := h.TaskSvc.Update(userID, id, title, listID, dueDate, priority, time.UTC); err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	return mcp.NewToolResultText("task updated"), nil
+}
+
+func (h *TaskHandlers) ToggleTask(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	userID := topimcp.UserIDFromContext(ctx)
+	if userID == "" {
+		return mcp.NewToolResultError("unauthorized"), nil
+	}
+	id, err := req.RequireString("id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	if err := h.TaskSvc.Toggle(userID, id); err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	return mcp.NewToolResultText("task toggled"), nil
+}
+
+func (h *TaskHandlers) AbandonTask(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	userID := topimcp.UserIDFromContext(ctx)
+	if userID == "" {
+		return mcp.NewToolResultError("unauthorized"), nil
+	}
+	id, err := req.RequireString("id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	if err := h.TaskSvc.Abandon(userID, id); err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	return mcp.NewToolResultText("task abandoned"), nil
+}
+
+func (h *TaskHandlers) RestoreTask(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	userID := topimcp.UserIDFromContext(ctx)
+	if userID == "" {
+		return mcp.NewToolResultError("unauthorized"), nil
+	}
+	id, err := req.RequireString("id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	if err := h.TaskSvc.Restore(userID, id); err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	return mcp.NewToolResultText("task restored"), nil
+}
+
+func (h *TaskHandlers) MoveToTrash(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	userID := topimcp.UserIDFromContext(ctx)
+	if userID == "" {
+		return mcp.NewToolResultError("unauthorized"), nil
+	}
+	id, err := req.RequireString("id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	if err := h.TaskSvc.MoveToTrash(userID, id); err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	return mcp.NewToolResultText("task moved to trash"), nil
+}
+
+func (h *TaskHandlers) DeleteTask(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	userID := topimcp.UserIDFromContext(ctx)
+	if userID == "" {
+		return mcp.NewToolResultError("unauthorized"), nil
+	}
+	id, err := req.RequireString("id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	if err := h.TaskSvc.Delete(userID, id); err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	return mcp.NewToolResultText("task deleted"), nil
+}
+
+func (h *TaskHandlers) ReorderTasks(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	userID := topimcp.UserIDFromContext(ctx)
+	if userID == "" {
+		return mcp.NewToolResultError("unauthorized"), nil
+	}
+	id, err := req.RequireString("id")
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	newIndex := req.GetInt("newIndex", 0)
+	if err := h.TaskSvc.Reorder(userID, id, newIndex); err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+	return mcp.NewToolResultText("tasks reordered"), nil
+}

@@ -13,13 +13,17 @@ const UserIDKey = "userId"
 
 func Auth(jwtHelper *jwt.Helper) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		auth := c.GetHeader("Authorization")
-		if auth == "" || !strings.HasPrefix(auth, "Bearer ") {
+		token := c.Query("token")
+		if token == "" {
+			if auth := c.GetHeader("Authorization"); auth != "" && strings.HasPrefix(auth, "Bearer ") {
+				token = strings.TrimPrefix(auth, "Bearer ")
+			}
+		}
+		if token == "" {
 			response.Error(c, http.StatusUnauthorized, "unauthorized")
 			c.Abort()
 			return
 		}
-		token := strings.TrimPrefix(auth, "Bearer ")
 		claims, err := jwtHelper.Verify(token)
 		if err != nil {
 			response.Error(c, http.StatusUnauthorized, "unauthorized")

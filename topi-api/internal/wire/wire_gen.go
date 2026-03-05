@@ -10,6 +10,8 @@ import (
 	"errors"
 	"github.com/deantook/topi-api/internal/config"
 	"github.com/deantook/topi-api/internal/handler"
+	"github.com/deantook/topi-api/internal/mcp/handlers"
+	"github.com/deantook/topi-api/internal/mcpsetup"
 	"github.com/deantook/topi-api/internal/middleware"
 	"github.com/deantook/topi-api/internal/repository"
 	"github.com/deantook/topi-api/internal/service"
@@ -45,7 +47,10 @@ func InitializeServer() (*Server, error) {
 	taskRepository := repository.NewTaskRepository(db)
 	taskService := service.NewTaskService(taskRepository)
 	taskHandler := handler.NewTaskHandler(taskService)
-	engine := provideRouter(configConfig, authHandler, listHandler, taskHandler, helper)
+	taskHandlers := handlers.NewTaskHandlers(taskService)
+	listHandlers := handlers.NewListHandlers(listService)
+	mcpServer := mcpsetup.NewMCPServer(taskHandlers, listHandlers, helper)
+	engine := provideRouter(configConfig, authHandler, listHandler, taskHandler, mcpServer, helper)
 	server := &Server{
 		Engine: engine,
 		Config: configConfig,
@@ -78,6 +83,7 @@ func provideRouter(
 	authH *handler.AuthHandler,
 	listH *handler.ListHandler,
 	taskH *handler.TaskHandler,
+	mcpServer *mcpsetup.MCPServer,
 	jwtHelper *jwt.Helper,
 ) *gin.Engine {
 	gin.SetMode(cfg.GinMode)
@@ -92,6 +98,7 @@ func provideRouter(
 
 		auth := v1.Group("")
 		auth.Use(middleware.Auth(jwtHelper))
+		auth.Use(middleware.Timezone())
 		{
 			auth.GET("/tasks", taskH.List)
 			auth.POST("/tasks", taskH.Create)
@@ -109,6 +116,14 @@ func provideRouter(
 			auth.PATCH("/lists/:id", listH.Update)
 			auth.DELETE("/lists/:id", listH.Delete)
 		}
+	}
+
+	mcpGroup := r.Group("/mcp")
+	mcpGroup.Use(middleware.Auth(jwtHelper))
+	mcpGroup.Use(middleware.InjectUserIDForMCP())
+	{
+		mcpGroup.GET("/sse", gin.WrapH(mcpServer.SSEHandler()))
+		mcpGroup.POST("/message", gin.WrapH(mcpServer.MessageHandler()))
 	}
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

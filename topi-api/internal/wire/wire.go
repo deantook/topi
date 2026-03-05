@@ -8,6 +8,8 @@ import (
 
 	"github.com/deantook/topi-api/internal/config"
 	"github.com/deantook/topi-api/internal/handler"
+	"github.com/deantook/topi-api/internal/mcp/handlers"
+	"github.com/deantook/topi-api/internal/mcpsetup"
 	"github.com/deantook/topi-api/internal/middleware"
 	"github.com/deantook/topi-api/internal/repository"
 	"github.com/deantook/topi-api/internal/service"
@@ -40,6 +42,9 @@ func InitializeServer() (*Server, error) {
 		handler.NewAuthHandler,
 		handler.NewListHandler,
 		handler.NewTaskHandler,
+		handlers.NewTaskHandlers,
+		handlers.NewListHandlers,
+		mcpsetup.NewMCPServer,
 		provideRouter,
 		wire.Struct(new(Server), "Engine", "Config", "DB"),
 	)
@@ -62,6 +67,7 @@ func provideRouter(
 	authH *handler.AuthHandler,
 	listH *handler.ListHandler,
 	taskH *handler.TaskHandler,
+	mcpServer *mcpsetup.MCPServer,
 	jwtHelper *jwt.Helper,
 ) *gin.Engine {
 	gin.SetMode(cfg.GinMode)
@@ -94,6 +100,15 @@ func provideRouter(
 			auth.PATCH("/lists/:id", listH.Update)
 			auth.DELETE("/lists/:id", listH.Delete)
 		}
+	}
+
+	// MCP routes: Auth validates JWT, InjectUserIDForMCP puts userID in request context
+	mcpGroup := r.Group("/mcp")
+	mcpGroup.Use(middleware.Auth(jwtHelper))
+	mcpGroup.Use(middleware.InjectUserIDForMCP())
+	{
+		mcpGroup.GET("/sse", gin.WrapH(mcpServer.SSEHandler()))
+		mcpGroup.POST("/message", gin.WrapH(mcpServer.MessageHandler()))
 	}
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
