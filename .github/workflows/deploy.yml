@@ -1,0 +1,75 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # 允许手动触发
+
+env:
+  DEPLOY_PATH: /var/www/topi
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+          cache-dependency-path: topi/pnpm-lock.yaml
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache-dependency-path: topi-api/go.sum
+
+      - name: Build Frontend
+        working-directory: topi
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build
+
+      - name: Build API Binary
+        working-directory: topi-api
+        run: |
+          go build -o topi-api ./cmd/server
+
+      - name: Prepare Deploy Artifacts
+        run: |
+          mkdir -p deploy-artifacts/frontend deploy-artifacts/api
+          cp -r topi/build deploy-artifacts/frontend/
+          cp topi/package.json deploy-artifacts/frontend/
+          cp topi/pnpm-lock.yaml deploy-artifacts/frontend/ 2>/dev/null || true
+          cd topi && pnpm install --omit=dev --frozen-lockfile && cp -r node_modules ../deploy-artifacts/frontend/
+          cp topi-api/topi-api deploy-artifacts/api/
+
+      - name: Deploy via SCP
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "deploy-artifacts/frontend/*,deploy-artifacts/api/*"
+          target: ${{ secrets.DEPLOY_PATH }}
+
+      - name: Restart Services on Server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}
+            sudo systemctl restart topi-api 2>/dev/null || true
+            sudo systemctl restart topi-web 2>/dev/null || true
+            echo "Deploy completed"
