@@ -15,10 +15,23 @@ import "./app.css";
 const themeScript = `
 (function() {
   const k = 'topi-theme';
-  const v = localStorage.getItem(k);
-  const dark = v === 'dark' || (v !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const raw = localStorage.getItem(k);
+  let mode = 'system', accent = 'neutral';
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && (parsed.mode === 'light' || parsed.mode === 'dark' || parsed.mode === 'system')) {
+        mode = parsed.mode;
+        if (['neutral','blue','green','purple'].includes(parsed.accent)) accent = parsed.accent;
+      }
+    } catch (_) {
+      if (raw === 'light' || raw === 'dark' || raw === 'system') mode = raw;
+    }
+  }
+  const dark = mode === 'dark' || (mode !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
   document.documentElement.classList.toggle('dark', dark);
   document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-accent', accent);
 })();
 `;
 
