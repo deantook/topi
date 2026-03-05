@@ -30,6 +30,7 @@ type Task struct {
 	UserID    string         `gorm:"type:char(36);index;not null" json:"-"`
 	ListID    *string        `gorm:"type:char(36);index" json:"list_id"`
 	Title     string         `gorm:"size:512;not null" json:"title"`
+	Detail    *string        `gorm:"type:text" json:"detail,omitempty"`
 	Completed bool           `gorm:"default:false" json:"completed"`
 	DueDate   *string        `gorm:"type:datetime" json:"due_date"`
 	Priority  TaskPriority   `gorm:"size:6;default:none" json:"priority"`
