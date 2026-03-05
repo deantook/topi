@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/context-menu";
 import type { Task, TaskFilter, TaskPriority } from "@/hooks/use-tasks";
 import { useTasks } from "@/hooks/use-tasks";
-import { useCustomLists } from "@/hooks/use-custom-lists";
+import { useListsFromDashboard } from "@/hooks/use-lists-from-dashboard";
 import {
   PRIORITY_LABEL,
   PRIORITY_FLAG_CLASS,
@@ -338,7 +338,7 @@ export function TaskList({
     },
     [tasks, reorderTasks]
   );
-  const { getList } = useCustomLists();
+  const { getList } = useListsFromDashboard();
 
   const showListName =
     filter === "all" ||

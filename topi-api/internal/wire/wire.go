@@ -40,6 +40,7 @@ func InitializeServer() (*Server, error) {
 		service.NewListService,
 		service.NewTaskService,
 		handler.NewAuthHandler,
+		handler.NewDashboardHandler,
 		handler.NewListHandler,
 		handler.NewTaskHandler,
 		handlers.NewTaskHandlers,
@@ -65,6 +66,7 @@ func provideJWT(cfg *config.Config) (*jwt.Helper, error) {
 func provideRouter(
 	cfg *config.Config,
 	authH *handler.AuthHandler,
+	dashboardH *handler.DashboardHandler,
 	listH *handler.ListHandler,
 	taskH *handler.TaskHandler,
 	mcpServer *mcpsetup.MCPServer,
@@ -84,6 +86,7 @@ func provideRouter(
 		auth.Use(middleware.Auth(jwtHelper))
 		auth.Use(middleware.Timezone())
 		{
+			auth.GET("/dashboard", dashboardH.Dashboard)
 			auth.GET("/tasks", taskH.List)
 			auth.POST("/tasks", taskH.Create)
 			// CRITICAL: POST /tasks/batch and /tasks/reorder BEFORE /tasks/:id to avoid id matching

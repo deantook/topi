@@ -58,6 +58,85 @@ func formatUTCToLocal(utcStr string, loc *time.Location) string {
 
 var ErrTaskNotFound = errors.New("task not found")
 
+// DashboardCounts holds task counts per filter for the dashboard API.
+type DashboardCounts struct {
+	All         int            `json:"all"`
+	Today       int            `json:"today"`
+	Tomorrow    int            `json:"tomorrow"`
+	RecentSeven int            `json:"recentSeven"`
+	Inbox       int            `json:"inbox"`
+	Completed   int            `json:"completed"`
+	Abandoned   int            `json:"abandoned"`
+	Trash       int            `json:"trash"`
+	List        map[string]int `json:"list"`
+}
+
+// GetCounts returns task counts for dashboard. Uses loc for today/tomorrow/recent-seven date filtering.
+func (s *TaskService) GetCounts(userID string, loc *time.Location) (*DashboardCounts, error) {
+	if loc == nil {
+		loc = time.UTC
+	}
+	now := time.Now().In(loc)
+	todayStr := now.Format("2006-01-02")
+	tomorrow := now.AddDate(0, 0, 1)
+	tomorrowStr := tomorrow.Format("2006-01-02")
+	weekEnd := now.AddDate(0, 0, 6)
+	endStr := weekEnd.Format("2006-01-02")
+
+	allTasks, err := s.repo.ListByUserID(userID, "all", nil)
+	if err != nil {
+		return nil, err
+	}
+	completedTasks, err := s.repo.ListByUserID(userID, "completed", nil)
+	if err != nil {
+		return nil, err
+	}
+	abandonedTasks, err := s.repo.ListByUserID(userID, "abandoned", nil)
+	if err != nil {
+		return nil, err
+	}
+	trashTasks, err := s.repo.ListByUserID(userID, "trash", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	counts := &DashboardCounts{
+		All:         len(allTasks),
+		Completed:   len(completedTasks),
+		Abandoned:   len(abandonedTasks),
+		Trash:       len(trashTasks),
+		List:        make(map[string]int),
+	}
+
+	for _, t := range allTasks {
+		if t.ListID != nil && *t.ListID != "" {
+			counts.List[*t.ListID]++
+		}
+		if t.ListID == nil && t.DueDate == nil {
+			counts.Inbox++
+		}
+		if t.DueDate == nil {
+			continue
+		}
+		localStr := formatUTCToLocal(*t.DueDate, loc)
+		if len(localStr) < 10 {
+			continue
+		}
+		d := localStr[:10]
+		if d == todayStr {
+			counts.Today++
+		}
+		if d == tomorrowStr {
+			counts.Tomorrow++
+		}
+		if d >= todayStr && d <= endStr {
+			counts.RecentSeven++
+		}
+	}
+
+	return counts, nil
+}
+
 // BatchTaskInput is input for a single task in batch create.
 type BatchTaskInput struct {
 	Title    string

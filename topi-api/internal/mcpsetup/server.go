@@ -2,7 +2,9 @@ package mcpsetup
 
 import (
 	"net/http"
+	"strings"
 
+	"github.com/deantook/topi-api/internal/config"
 	"github.com/deantook/topi-api/internal/mcp/handlers"
 	"github.com/deantook/topi-api/pkg/jwt"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -25,7 +27,7 @@ func (m *MCPServer) MessageHandler() http.Handler {
 }
 
 // NewMCPServer creates and configures the MCP server with all Topi tools.
-func NewMCPServer(taskH *handlers.TaskHandlers, listH *handlers.ListHandlers, _ *jwt.Helper) *MCPServer {
+func NewMCPServer(cfg *config.Config, taskH *handlers.TaskHandlers, listH *handlers.ListHandlers, _ *jwt.Helper) *MCPServer {
 	s := server.NewMCPServer("Topi MCP", "1.0.0", server.WithToolCapabilities(true))
 
 	// Task tools
@@ -144,11 +146,15 @@ func NewMCPServer(taskH *handlers.TaskHandlers, listH *handlers.ListHandlers, _ 
 		listH.DeleteList,
 	)
 
-	sseServer := server.NewSSEServer(s,
+	opts := []server.SSEOption{
 		server.WithStaticBasePath("/mcp"),
 		server.WithSSEEndpoint("/sse"),
 		server.WithMessageEndpoint("/message"),
-	)
+	}
+	if baseURL := strings.TrimSuffix(cfg.MCPBaseURL, "/"); baseURL != "" {
+		opts = append(opts, server.WithBaseURL(baseURL))
+	}
+	sseServer := server.NewSSEServer(s, opts...)
 
 	return &MCPServer{sseServer: sseServer}
 }
