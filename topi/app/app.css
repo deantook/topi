@@ -131,6 +131,31 @@ body {
   --radius-4xl: calc(var(--radius) + 16px);
 }
 
+/* 统一滚动条样式，避免默认双线/浮雕效果 */
+.overflow-auto,
+.overflow-y-auto {
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted) transparent;
+}
+.overflow-auto::-webkit-scrollbar,
+.overflow-y-auto::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.overflow-auto::-webkit-scrollbar-track,
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: transparent;
+}
+.overflow-auto::-webkit-scrollbar-thumb,
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: var(--muted);
+  border-radius: 4px;
+}
+.overflow-auto::-webkit-scrollbar-thumb:hover,
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

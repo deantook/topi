@@ -90,7 +90,7 @@ export function TaskDetailPanel({ taskId, task, onClose, onSaveDetail }: TaskDet
       {taskId == null ? (
         <EmptyState />
       ) : task ? (
-        <Card className="flex h-full flex-col overflow-hidden">
+        <Card className="flex h-full flex-col overflow-hidden shadow-none">
           <TaskDetailContent task={task} onSaveDetail={onSaveDetail} />
         </Card>
       ) : (

@@ -39,7 +39,7 @@ export function TaskPageWithDetail({
 
   return (
     <div className="flex min-w-0 flex-1 gap-4">
-      <div className="min-w-0 shrink-0 basis-[28rem] max-w-[28rem]">
+      <div className="min-w-0 shrink-0 basis-[60rem] max-w-[70.56rem]">
         <TaskList
           title={title}
           filter={filter}
