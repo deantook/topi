@@ -71,10 +71,6 @@ const ThemeContext = createContext<{
   accent: Accent;
   setAccent: (accent: Accent) => void;
   resolvedTheme: "light" | "dark";
-  /** @deprecated Use mode/setMode. Kept for ThemeToggle until Task 4. */
-  theme: Theme;
-  /** @deprecated Use setMode. Kept for ThemeToggle until Task 4. */
-  setTheme: (theme: Theme) => void;
 } | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
@@ -132,8 +128,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         accent: themeStorage.accent,
         setAccent,
         resolvedTheme,
-        theme: themeStorage.mode,
-        setTheme: setMode,
       }}
     >
       {children}
