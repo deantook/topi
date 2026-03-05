@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useState,
@@ -12,6 +13,10 @@ import {
 const STORAGE_KEY = "topi-theme";
 
 export type Theme = "light" | "dark" | "system";
+export type Accent = "neutral" | "blue" | "green" | "purple";
+export type ThemeStorage = { mode: Theme; accent: Accent };
+
+const VALID_ACCENTS: Accent[] = ["neutral", "blue", "green", "purple"];
 
 function getSystemTheme(): "light" | "dark" {
   if (typeof window === "undefined") return "light";
@@ -20,25 +25,38 @@ function getSystemTheme(): "light" | "dark" {
     : "light";
 }
 
-function getStoredTheme(): Theme {
-  if (typeof window === "undefined") return "system";
+function getStoredTheme(): ThemeStorage {
+  if (typeof window === "undefined")
+    return { mode: "system", accent: "neutral" };
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored === "light" || stored === "dark" || stored === "system") {
-    return stored;
+    return { mode: stored, accent: "neutral" };
   }
-  return "system";
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored) as Partial<ThemeStorage>;
+      if (
+        parsed &&
+        (parsed.mode === "light" || parsed.mode === "dark" || parsed.mode === "system")
+      ) {
+        const accent: Accent = VALID_ACCENTS.includes((parsed.accent as Accent) ?? "")
+          ? (parsed.accent as Accent)
+          : "neutral";
+        return { mode: parsed.mode, accent };
+      }
+    } catch {
+      // fall through
+    }
+  }
+  return { mode: "system", accent: "neutral" };
 }
 
-function applyTheme(theme: Theme) {
-  const resolved = theme === "system" ? getSystemTheme() : theme;
+function applyTheme(mode: Theme, accent: Accent) {
+  const resolved = mode === "system" ? getSystemTheme() : mode;
   const root = document.documentElement;
-  if (resolved === "dark") {
-    root.classList.add("dark");
-    root.style.colorScheme = "dark";
-  } else {
-    root.classList.remove("dark");
-    root.style.colorScheme = "light";
-  }
+  root.classList.toggle("dark", resolved === "dark");
+  root.style.colorScheme = resolved === "dark" ? "dark" : "light";
+  root.setAttribute("data-accent", accent);
 }
 
 function subscribe(cb: () => void) {
@@ -48,36 +66,76 @@ function subscribe(cb: () => void) {
 }
 
 const ThemeContext = createContext<{
-  theme: Theme;
-  setTheme: (theme: Theme) => void;
+  mode: Theme;
+  setMode: (mode: Theme) => void;
+  accent: Accent;
+  setAccent: (accent: Accent) => void;
   resolvedTheme: "light" | "dark";
+  /** @deprecated Use mode/setMode. Kept for ThemeToggle until Task 4. */
+  theme: Theme;
+  /** @deprecated Use setMode. Kept for ThemeToggle until Task 4. */
+  setTheme: (theme: Theme) => void;
 } | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("system");
+  const [themeStorage, setThemeStorage] = useState<ThemeStorage>({
+    mode: "system",
+    accent: "neutral",
+  });
 
-  const setTheme = (value: Theme) => {
-    setThemeState(value);
-    localStorage.setItem(STORAGE_KEY, value);
-    applyTheme(value);
-  };
+  const setMode = useCallback((mode: Theme) => {
+    setThemeStorage((prev) => {
+      const next = { ...prev, mode };
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      } catch (e) {
+        console.warn("Failed to persist theme:", e);
+      }
+      applyTheme(next.mode, next.accent);
+      return next;
+    });
+  }, []);
 
-  useEffect(() => {
-    setThemeState(getStoredTheme());
+  const setAccent = useCallback((accent: Accent) => {
+    setThemeStorage((prev) => {
+      const next = { ...prev, accent };
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      } catch (e) {
+        console.warn("Failed to persist theme:", e);
+      }
+      applyTheme(next.mode, next.accent);
+      return next;
+    });
   }, []);
 
   useEffect(() => {
-    applyTheme(theme);
-  }, [theme]);
+    const { mode, accent } = getStoredTheme();
+    setThemeStorage({ mode, accent });
+    applyTheme(mode, accent);
+  }, []);
 
   const resolvedTheme = useSyncExternalStore<"light" | "dark">(
     subscribe,
-    () => (theme === "system" ? getSystemTheme() : theme),
+    () =>
+      themeStorage.mode === "system"
+        ? getSystemTheme()
+        : themeStorage.mode,
     () => "light" as const
   );
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, resolvedTheme }}>
+    <ThemeContext.Provider
+      value={{
+        mode: themeStorage.mode,
+        setMode,
+        accent: themeStorage.accent,
+        setAccent,
+        resolvedTheme,
+        theme: themeStorage.mode,
+        setTheme: setMode,
+      }}
+    >
       {children}
     </ThemeContext.Provider>
   );
