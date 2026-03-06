@@ -61,7 +61,8 @@ func (h *TaskHandler) List(c *gin.Context) {
 			loc = l
 		}
 	}
-	tasks, err := h.svc.List(userID, filter, lp, op, date, startDate, endDate, loc)
+	includeCompleted := c.Query("includeCompleted") == "true"
+	tasks, err := h.svc.List(userID, filter, lp, op, date, startDate, endDate, loc, includeCompleted)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return

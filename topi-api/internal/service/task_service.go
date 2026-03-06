@@ -304,7 +304,7 @@ func (s *TaskService) BatchCreate(userID string, tasks []BatchTaskInput, default
 	return created, nil
 }
 
-func (s *TaskService) List(userID, filter string, listID *string, owner *string, date, startDate, endDate string, loc *time.Location) ([]model.Task, error) {
+func (s *TaskService) List(userID, filter string, listID *string, owner *string, date, startDate, endDate string, loc *time.Location, includeCompleted bool) ([]model.Task, error) {
 	var ownerParam *string
 	if owner != nil && *owner != "" && *owner != "all" {
 		ownerParam = owner

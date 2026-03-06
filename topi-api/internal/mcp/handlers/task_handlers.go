@@ -49,7 +49,7 @@ func (h *TaskHandlers) ListTasks(ctx context.Context, req mcp.CallToolRequest) (
 	date := req.GetString("date", "")
 	startDate := req.GetString("startDate", "")
 	endDate := req.GetString("endDate", "")
-	tasks, err := h.TaskSvc.List(userID, filter, lp, op, date, startDate, endDate, time.UTC)
+	tasks, err := h.TaskSvc.List(userID, filter, lp, op, date, startDate, endDate, time.UTC, false)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
