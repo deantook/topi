@@ -316,6 +316,28 @@ func (s *TaskService) List(userID, filter string, listID *string, owner *string,
 	if loc == nil {
 		loc = time.UTC
 	}
+
+	// includeCompleted: 合并 active + completed
+	if includeCompleted {
+		allowed := filter == "all" || filter == "today" || filter == "tomorrow" || filter == "recent-seven" || filter == "inbox"
+		if allowed {
+			var completed []model.Task
+			switch filter {
+			case "inbox":
+				completed, err = s.repo.ListByUserID(userID, "completed-inbox", nil, ownerParam)
+			case "all":
+				// 清单页 listID!=nil 或全部页 listID=nil
+				completed, err = s.repo.ListByUserID(userID, "completed", listID, ownerParam)
+			case "today", "tomorrow", "recent-seven":
+				completed, err = s.repo.ListByUserID(userID, "completed", nil, ownerParam)
+			}
+			if err != nil {
+				return nil, err
+			}
+			tasks = append(tasks, completed...)
+		}
+	}
+
 	// 日期过滤：DB 存 UTC，转为用户本地日期再与 date 比较
 	if filter == "today" || filter == "tomorrow" {
 		if date == "" {
