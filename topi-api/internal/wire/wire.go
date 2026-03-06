@@ -93,8 +93,13 @@ func provideRouter(
 			auth.GET("/dashboard", dashboardH.Dashboard)
 			auth.GET("/tasks", taskH.List)
 			auth.POST("/tasks", taskH.Create)
-			// CRITICAL: POST /tasks/batch and /tasks/reorder BEFORE /tasks/:id to avoid id matching
+			// CRITICAL: POST /tasks/batch* and /tasks/reorder BEFORE /tasks/:id to avoid id matching
 			auth.POST("/tasks/batch", taskH.CreateBatch)
+			auth.POST("/tasks/batch/trash", taskH.BatchTrash)
+			auth.POST("/tasks/batch/abandon", taskH.BatchAbandon)
+			auth.POST("/tasks/batch/toggle", taskH.BatchToggle)
+			auth.POST("/tasks/batch/restore", taskH.BatchRestore)
+			auth.POST("/tasks/batch/move", taskH.BatchMove)
 			auth.POST("/tasks/reorder", taskH.Reorder)
 			auth.PATCH("/tasks/:id", taskH.Update)
 			auth.POST("/tasks/:id/toggle", taskH.Toggle)
