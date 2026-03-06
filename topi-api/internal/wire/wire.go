@@ -101,6 +101,7 @@ func provideRouter(
 			auth.POST("/tasks/:id/abandon", taskH.Abandon)
 			auth.POST("/tasks/:id/restore", taskH.Restore)
 			auth.POST("/tasks/:id/trash", taskH.Trash)
+			auth.DELETE("/tasks/trash", taskH.ClearTrash)
 			auth.DELETE("/tasks/:id", taskH.Delete)
 
 			auth.GET("/lists", listH.List)
