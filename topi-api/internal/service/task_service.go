@@ -515,6 +515,68 @@ func (s *TaskService) ClearTrash(userID string) error {
 	return s.repo.DeleteByUserIDAndStatus(userID, string(model.TaskStatusTrash))
 }
 
+// BatchTrash moves multiple tasks to trash. Returns error on first failure.
+func (s *TaskService) BatchTrash(userID string, ids []string) error {
+	for _, id := range ids {
+		if err := s.MoveToTrash(userID, id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// BatchAbandon abandons multiple tasks.
+func (s *TaskService) BatchAbandon(userID string, ids []string) error {
+	for _, id := range ids {
+		if err := s.Abandon(userID, id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// BatchToggle toggles completion for multiple tasks.
+func (s *TaskService) BatchToggle(userID string, ids []string) error {
+	for _, id := range ids {
+		if err := s.Toggle(userID, id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// BatchRestore restores multiple tasks from abandoned/trash.
+func (s *TaskService) BatchRestore(userID string, ids []string) error {
+	for _, id := range ids {
+		if err := s.Restore(userID, id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// BatchMove moves multiple tasks to a list (listID nil = inbox). Uses repo directly to support list_id=NULL.
+func (s *TaskService) BatchMove(userID string, ids []string, listID *string) error {
+	var listIDVal interface{}
+	if listID != nil {
+		listIDVal = *listID
+	} else {
+		listIDVal = nil
+	}
+	for _, id := range ids {
+		if _, err := s.repo.GetByIDAndUserID(id, userID); err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrTaskNotFound
+			}
+			return err
+		}
+		if err := s.repo.UpdateFields(id, userID, map[string]interface{}{"list_id": listIDVal}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (s *TaskService) Reorder(userID, id string, newIndex int) error {
 	tasks, err := s.repo.ListByUserID(userID, "all", nil, nil)
 	if err != nil {
