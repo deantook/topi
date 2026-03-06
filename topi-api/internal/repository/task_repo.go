@@ -115,6 +115,13 @@ func (r *TaskRepository) Delete(id, userID string) error {
 	return r.db.Where("id = ? AND user_id = ?", id, userID).Delete(&model.Task{}).Error
 }
 
+// ClearListIDByListID sets list_id to NULL for all tasks with the given listID and userID.
+func (r *TaskRepository) ClearListIDByListID(userID, listID string) error {
+	return r.db.Model(&model.Task{}).
+		Where("user_id = ? AND list_id = ?", userID, listID).
+		Updates(map[string]interface{}{"list_id": nil}).Error
+}
+
 // Search returns tasks matching q in title, status in (active, completed), limit results.
 func (r *TaskRepository) Search(userID, q string, limit int) ([]model.Task, error) {
 	if limit <= 0 {
