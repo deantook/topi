@@ -72,6 +72,7 @@ func provideRouter(
 	listH *handler.ListHandler,
 	taskH *handler.TaskHandler,
 	mcpTokenH *handler.McpTokenHandler,
+	mcpTokenSvc *service.McpTokenService,
 	mcpServer *mcpsetup.MCPServer,
 	jwtHelper *jwt.Helper,
 ) *gin.Engine {
@@ -113,9 +114,9 @@ func provideRouter(
 		}
 	}
 
-	// MCP routes: Auth validates JWT, InjectUserIDForMCP puts userID in request context
+	// MCP routes: McpAuth validates MCP token, InjectUserIDForMCP puts userID in request context
 	mcpGroup := r.Group("/mcp")
-	mcpGroup.Use(middleware.Auth(jwtHelper))
+	mcpGroup.Use(middleware.McpAuth(mcpTokenSvc))
 	mcpGroup.Use(middleware.InjectUserIDForMCP())
 	{
 		mcpGroup.GET("/sse", gin.WrapH(mcpServer.SSEHandler()))

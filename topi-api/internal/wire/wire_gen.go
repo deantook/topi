@@ -53,7 +53,7 @@ func InitializeServer() (*Server, error) {
 	taskHandlers := handlers.NewTaskHandlers(taskService)
 	listHandlers := handlers.NewListHandlers(listService)
 	mcpServer := mcpsetup.NewMCPServer(configConfig, taskHandlers, listHandlers, helper)
-	engine := provideRouter(configConfig, authHandler, dashboardHandler, listHandler, taskHandler, mcpTokenHandler, mcpServer, helper)
+	engine := provideRouter(configConfig, authHandler, dashboardHandler, listHandler, taskHandler, mcpTokenHandler, mcpTokenService, mcpServer, helper)
 	server := &Server{
 		Engine: engine,
 		Config: configConfig,
@@ -88,6 +88,7 @@ func provideRouter(
 	listH *handler.ListHandler,
 	taskH *handler.TaskHandler,
 	mcpTokenH *handler.McpTokenHandler,
+	mcpTokenSvc *service.McpTokenService,
 	mcpServer *mcpsetup.MCPServer,
 	jwtHelper *jwt.Helper,
 ) *gin.Engine {
@@ -130,7 +131,7 @@ func provideRouter(
 	}
 
 	mcpGroup := r.Group("/mcp")
-	mcpGroup.Use(middleware.Auth(jwtHelper))
+	mcpGroup.Use(middleware.McpAuth(mcpTokenSvc))
 	mcpGroup.Use(middleware.InjectUserIDForMCP())
 	{
 		mcpGroup.GET("/sse", gin.WrapH(mcpServer.SSEHandler()))
