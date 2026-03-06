@@ -34,3 +34,16 @@ func (r *UserRepository) GetByUsername(username string) (*model.User, error) {
 	}
 	return &u, nil
 }
+
+func (r *UserRepository) GetByMcpTokenHash(hash string) (*model.User, error) {
+	var u model.User
+	err := r.db.Where("mcp_token_hash = ?", hash).First(&u).Error
+	if err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+
+func (r *UserRepository) Update(u *model.User) error {
+	return r.db.Save(u).Error
+}
