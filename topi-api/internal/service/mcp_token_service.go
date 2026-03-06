@@ -9,8 +9,8 @@ import (
 	"github.com/deantook/topi-api/internal/repository"
 )
 
-const tokenPrefix = "topi_"
-const tokenSuffixLen = 8
+const tokenPrefix = "tp_"
+const tokenSuffixLen = 24
 
 var charset = []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 
