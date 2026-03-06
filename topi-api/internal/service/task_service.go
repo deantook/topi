@@ -510,6 +510,11 @@ func (s *TaskService) Delete(userID, id string) error {
 	return s.repo.Delete(id, userID)
 }
 
+// ClearTrash permanently deletes all trash tasks for the user.
+func (s *TaskService) ClearTrash(userID string) error {
+	return s.repo.DeleteByUserIDAndStatus(userID, string(model.TaskStatusTrash))
+}
+
 func (s *TaskService) Reorder(userID, id string, newIndex int) error {
 	tasks, err := s.repo.ListByUserID(userID, "all", nil, nil)
 	if err != nil {
