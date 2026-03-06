@@ -43,13 +43,22 @@ func (r *TaskRepository) ListByUserID(userID string, filter string, listID *stri
 	switch filter {
 	case "all":
 		q = q.Where("status = ?", model.TaskStatusActive)
+		if listID != nil && *listID != "" {
+			q = q.Where("list_id = ?", *listID)
+		}
 	case "today", "tomorrow", "recent-seven":
 		q = q.Where("status = ?", model.TaskStatusActive)
 		// 日期过滤由 service 层处理
 	case "inbox":
 		q = q.Where("status = ? AND list_id IS NULL AND due_date IS NULL", model.TaskStatusActive)
 	case "completed":
-		q = q.Where("status = ?", model.TaskStatusCompleted)
+		if listID != nil && *listID != "" {
+			q = q.Where("status = ? AND list_id = ?", model.TaskStatusCompleted, *listID)
+		} else {
+			q = q.Where("status = ?", model.TaskStatusCompleted)
+		}
+	case "completed-inbox":
+		q = q.Where("status = ? AND list_id IS NULL AND due_date IS NULL", model.TaskStatusCompleted)
 	case "abandoned":
 		q = q.Where("status = ?", model.TaskStatusAbandoned)
 	case "trash":
