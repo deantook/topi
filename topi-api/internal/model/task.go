@@ -1,11 +1,36 @@
 package model
 
 import (
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
+
+// NormalizeDueDateForDB converts ISO8601 (e.g. 2026-03-07T00:00:00Z) to MySQL-compatible format (2006-01-02 15:04:05).
+func NormalizeDueDateForDB(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return s
+	}
+	s = strings.TrimSuffix(strings.TrimSuffix(s, "Z"), "z")
+	layouts := []string{
+		"2006-01-02 15:04:05",
+		"2006-01-02 15:04",
+		"2006-01-02T15:04:05",
+		"2006-01-02T15:04",
+		"2006-01-02",
+		time.RFC3339,
+		time.RFC3339Nano,
+	}
+	for _, layout := range layouts {
+		if t, err := time.Parse(layout, s); err == nil {
+			return t.UTC().Format("2006-01-02 15:04:05")
+		}
+	}
+	return s
+}
 
 type TaskStatus string
 
@@ -64,6 +89,18 @@ type Task struct {
 func (t *Task) BeforeCreate(tx *gorm.DB) error {
 	if t.ID == "" {
 		t.ID = uuid.New().String()
+	}
+	if t.DueDate != nil && *t.DueDate != "" {
+		norm := NormalizeDueDateForDB(*t.DueDate)
+		t.DueDate = &norm
+	}
+	return nil
+}
+
+func (t *Task) BeforeSave(tx *gorm.DB) error {
+	if t.DueDate != nil && *t.DueDate != "" {
+		norm := NormalizeDueDateForDB(*t.DueDate)
+		t.DueDate = &norm
 	}
 	return nil
 }
