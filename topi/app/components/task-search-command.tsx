@@ -46,7 +46,7 @@ export function TaskSearchCommand({ open, onOpenChange }: TaskSearchCommandProps
   const [debouncedQ, setDebouncedQ] = useState("");
 
   const { getList } = useListsFromDashboard();
-  const { data: tasks = [], isLoading, isFetching } = useTaskSearch(debouncedQ, open);
+  const { data: tasks = [], isLoading, isFetching, isError, refetch } = useTaskSearch(debouncedQ, open);
 
   useEffect(() => {
     if (!open) {
@@ -69,8 +69,9 @@ export function TaskSearchCommand({ open, onOpenChange }: TaskSearchCommandProps
 
   const trimmedInput = inputValue.trim();
   const hasQuery = debouncedQ.length > 0;
-  const showEmptyInput = !trimmedInput && !hasQuery;
-  const showNoResults = hasQuery && !isLoading && !isFetching && tasks.length === 0;
+  const showEmptyInput = !trimmedInput && !hasQuery && !isError;
+  const showNoResults = hasQuery && !isLoading && !isFetching && !isError && tasks.length === 0;
+  const showError = hasQuery && isError;
   const showLoading = (isLoading || isFetching) && hasQuery;
 
   return (
@@ -99,6 +100,18 @@ export function TaskSearchCommand({ open, onOpenChange }: TaskSearchCommandProps
           {showNoResults && (
             <CommandEmpty>未找到相关任务</CommandEmpty>
           )}
+          {showError && (
+            <div className="flex flex-col items-center gap-2 py-6 text-center text-sm text-muted-foreground">
+              <span>搜索失败，请重试</span>
+              <button
+                type="button"
+                onClick={() => refetch()}
+                className="text-primary underline underline-offset-4 hover:no-underline"
+              >
+                重试
+              </button>
+            </div>
+          )}
           {showLoading && (
             <div className="space-y-2 p-2">
               {[1, 2, 3].map((i) => (
@@ -106,13 +119,13 @@ export function TaskSearchCommand({ open, onOpenChange }: TaskSearchCommandProps
               ))}
             </div>
           )}
-          {!showEmptyInput && !showNoResults && !showLoading && tasks.length > 0 && (
+          {!showEmptyInput && !showNoResults && !showError && !showLoading && tasks.length > 0 && (
             <CommandGroup heading="任务">
               {tasks.map((task) => {
                 const listName = task.listId
-                  ? (getList(task.listId)?.name ?? null)
+                  ? (getList(task.listId)?.name ?? "已删除的清单")
                   : "收集箱";
-                const displayList = listName ?? "·";
+                const displayList = listName;
                 const dueStr = formatDueDate(task.dueDate);
 
                 return (
