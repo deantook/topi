@@ -378,6 +378,7 @@ export function TaskList({
     restoreTask,
     reorderTasks,
     isLoading,
+    clearTrash,
   } = tasksSource ?? fallback;
   const [showSkeleton, setShowSkeleton] = useState(false);
   useEffect(() => {
@@ -420,6 +421,8 @@ export function TaskList({
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [completedExpanded, setCompletedExpanded] = useState(false);
   const [deleteConfirmTaskId, setDeleteConfirmTaskId] = useState<string | null>(null);
+  const [clearTrashConfirmOpen, setClearTrashConfirmOpen] = useState(false);
+  const [isClearingTrash, setIsClearingTrash] = useState(false);
 
   const handleToggle = useCallback(
     (task: Task, itemMode?: "default" | "completed" | "abandoned" | "trash") => {
@@ -755,11 +758,24 @@ export function TaskList({
             </div>
           )}
         </div>
-        {showSort && (
-          <Button variant="ghost" size="icon-sm" aria-label="排序">
-            <span className="text-xs">1↓</span>
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {mode === "trash" && clearTrash && (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={tasks.length === 0 || isClearingTrash}
+              onClick={() => setClearTrashConfirmOpen(true)}
+              aria-label="一键清理"
+            >
+              {isClearingTrash ? "清空中…" : "一键清理"}
+            </Button>
+          )}
+          {showSort && (
+            <Button variant="ghost" size="icon-sm" aria-label="排序">
+              <span className="text-xs">1↓</span>
+            </Button>
+          )}
+        </div>
       </div>
 
       {showAddInput && (
@@ -886,6 +902,23 @@ export function TaskList({
         onConfirm={() => {
           if (deleteConfirmTaskId) {
             handleDelete(deleteConfirmTaskId);
+          }
+        }}
+      />
+      <DeleteConfirmDialog
+        open={clearTrashConfirmOpen}
+        onOpenChange={setClearTrashConfirmOpen}
+        title="清空垃圾桶？"
+        description={`将永久删除垃圾桶内全部 ${tasks.length} 项，无法恢复。`}
+        confirmLabel="清空"
+        onConfirm={async () => {
+          if (!clearTrash) return;
+          setIsClearingTrash(true);
+          try {
+            await clearTrash();
+            setClearTrashConfirmOpen(false);
+          } finally {
+            setIsClearingTrash(false);
           }
         }}
       />
