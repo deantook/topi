@@ -111,12 +111,18 @@ func provideRouter(
 			auth.POST("/tasks", taskH.Create)
 
 			auth.POST("/tasks/batch", taskH.CreateBatch)
+			auth.POST("/tasks/batch/trash", taskH.BatchTrash)
+			auth.POST("/tasks/batch/abandon", taskH.BatchAbandon)
+			auth.POST("/tasks/batch/toggle", taskH.BatchToggle)
+			auth.POST("/tasks/batch/restore", taskH.BatchRestore)
+			auth.POST("/tasks/batch/move", taskH.BatchMove)
 			auth.POST("/tasks/reorder", taskH.Reorder)
 			auth.PATCH("/tasks/:id", taskH.Update)
 			auth.POST("/tasks/:id/toggle", taskH.Toggle)
 			auth.POST("/tasks/:id/abandon", taskH.Abandon)
 			auth.POST("/tasks/:id/restore", taskH.Restore)
 			auth.POST("/tasks/:id/trash", taskH.Trash)
+			auth.DELETE("/tasks/trash", taskH.ClearTrash)
 			auth.DELETE("/tasks/:id", taskH.Delete)
 
 			auth.GET("/lists", listH.List)
