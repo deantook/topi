@@ -94,6 +94,11 @@ func (r *TaskRepository) UpdateFields(id, userID string, fields map[string]inter
 	if len(fields) == 0 {
 		return nil
 	}
+	if v, ok := fields["due_date"]; ok && v != nil {
+		if s, ok := v.(string); ok && s != "" {
+			fields["due_date"] = model.NormalizeDueDateForDB(s)
+		}
+	}
 	return r.db.Model(&model.Task{}).Where("id = ? AND user_id = ?", id, userID).Updates(fields).Error
 }
 
