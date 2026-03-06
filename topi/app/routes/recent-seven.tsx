@@ -3,7 +3,7 @@ import { TaskPageWithDetail } from "@/components/task-page-with-detail";
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "待办清单" },
+    { title: "topi" },
     { name: "description", content: "最近七天的任务" },
   ];
 }

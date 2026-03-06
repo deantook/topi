@@ -4,7 +4,7 @@ import { TaskPageWithDetail } from "@/components/task-page-with-detail";
 
 export function meta() {
   return [
-    { title: "待办清单" },
+    { title: "topi" },
     { name: "description", content: "自定义清单" },
   ];
 }

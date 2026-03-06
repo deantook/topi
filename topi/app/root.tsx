@@ -38,7 +38,7 @@ const themeScript = `
 `;
 
 export function meta() {
-  return [{ title: "待办清单" }];
+  return [{ title: "topi" }];
 }
 
 export const links: Route.LinksFunction = () => [

@@ -39,7 +39,7 @@ const registerSchema = z
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export function meta({}: Route.MetaArgs) {
-  return [{ title: "待办清单" }];
+  return [{ title: "topi" }];
 }
 
 export default function Register() {

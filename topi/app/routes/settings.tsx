@@ -26,7 +26,7 @@ import {
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "待办清单" },
+    { title: "topi" },
     { name: "description", content: "应用设置" },
   ];
 }

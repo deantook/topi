@@ -3,7 +3,7 @@ import { TaskList } from "@/components/task-list";
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "待办清单" },
+    { title: "topi" },
     { name: "description", content: "已删除的项目" },
   ];
 }
