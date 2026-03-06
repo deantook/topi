@@ -18,7 +18,7 @@ jobs:
           if [ -n "${{ secrets.VITE_API_URL }}" ]; then
             echo "url=${{ secrets.VITE_API_URL }}" >> $GITHUB_OUTPUT
           else
-            echo "url=http://${{ secrets.SERVER_HOST }}:8080" >> $GITHUB_OUTPUT
+            echo "url=https://www.lulumia.com" >> $GITHUB_OUTPUT
           fi
 
       - name: Build topi-web
@@ -51,7 +51,7 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
-          source: "docker-compose.yml,topi-api/.env,topi-web.tar.gz,topi-api.tar.gz"
+          source: "docker-compose.yml,topi-api/.env,topi-web.tar.gz,topi-api.tar.gz,deploy,pem"
           target: ${{ secrets.DEPLOY_PATH }}
 
       - name: Load images and deploy
