@@ -187,6 +187,125 @@ func (h *TaskHandler) CreateBatch(c *gin.Context) {
 	response.OK(c, out)
 }
 
+type BatchIDsReq struct {
+	IDs []string `json:"ids" binding:"required,dive,uuid"`
+}
+
+type BatchMoveReq struct {
+	IDs    []string `json:"ids" binding:"required,dive,uuid"`
+	ListID *string  `json:"listId"`
+}
+
+func (h *TaskHandler) BatchTrash(c *gin.Context) {
+	userID := c.GetString(middleware.UserIDKey)
+	var req BatchIDsReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	if len(req.IDs) == 0 {
+		response.Error(c, http.StatusBadRequest, "ids required")
+		return
+	}
+	if err := h.svc.BatchTrash(userID, req.IDs); err != nil {
+		if err == service.ErrTaskNotFound {
+			response.Error(c, http.StatusNotFound, "task not found")
+			return
+		}
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	response.OK(c, gin.H{"ok": true})
+}
+
+func (h *TaskHandler) BatchAbandon(c *gin.Context) {
+	userID := c.GetString(middleware.UserIDKey)
+	var req BatchIDsReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	if len(req.IDs) == 0 {
+		response.Error(c, http.StatusBadRequest, "ids required")
+		return
+	}
+	if err := h.svc.BatchAbandon(userID, req.IDs); err != nil {
+		if err == service.ErrTaskNotFound {
+			response.Error(c, http.StatusNotFound, "task not found")
+			return
+		}
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	response.OK(c, gin.H{"ok": true})
+}
+
+func (h *TaskHandler) BatchToggle(c *gin.Context) {
+	userID := c.GetString(middleware.UserIDKey)
+	var req BatchIDsReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	if len(req.IDs) == 0 {
+		response.Error(c, http.StatusBadRequest, "ids required")
+		return
+	}
+	if err := h.svc.BatchToggle(userID, req.IDs); err != nil {
+		if err == service.ErrTaskNotFound {
+			response.Error(c, http.StatusNotFound, "task not found")
+			return
+		}
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	response.OK(c, gin.H{"ok": true})
+}
+
+func (h *TaskHandler) BatchRestore(c *gin.Context) {
+	userID := c.GetString(middleware.UserIDKey)
+	var req BatchIDsReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	if len(req.IDs) == 0 {
+		response.Error(c, http.StatusBadRequest, "ids required")
+		return
+	}
+	if err := h.svc.BatchRestore(userID, req.IDs); err != nil {
+		if err == service.ErrTaskNotFound {
+			response.Error(c, http.StatusNotFound, "task not found")
+			return
+		}
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	response.OK(c, gin.H{"ok": true})
+}
+
+func (h *TaskHandler) BatchMove(c *gin.Context) {
+	userID := c.GetString(middleware.UserIDKey)
+	var req BatchMoveReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	if len(req.IDs) == 0 {
+		response.Error(c, http.StatusBadRequest, "ids required")
+		return
+	}
+	if err := h.svc.BatchMove(userID, req.IDs, req.ListID); err != nil {
+		if err == service.ErrTaskNotFound {
+			response.Error(c, http.StatusNotFound, "task not found")
+			return
+		}
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	response.OK(c, gin.H{"ok": true})
+}
+
 type UpdateTaskReq struct {
 	Title               *string `json:"title"`
 	ListID              *string `json:"listId"`
