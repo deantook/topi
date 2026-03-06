@@ -11,25 +11,9 @@ import (
 	"gorm.io/gorm"
 )
 
-// normalizeDateTimeString accepts yyyy-MM-dd, yyyy-MM-dd HH:mm:ss, yyyy-MM-ddTHH:mm etc., outputs yyyy-MM-dd HH:mm:ss.
+// normalizeDateTimeString accepts yyyy-MM-dd, yyyy-MM-dd HH:mm:ss, ISO8601, etc., outputs yyyy-MM-dd HH:mm:ss.
 func normalizeDateTimeString(s string) string {
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return s
-	}
-	layouts := []string{
-		"2006-01-02 15:04:05",
-		"2006-01-02 15:04",
-		"2006-01-02T15:04:05",
-		"2006-01-02T15:04",
-		"2006-01-02",
-	}
-	for _, layout := range layouts {
-		if t, err := time.Parse(layout, s); err == nil {
-			return t.Format("2006-01-02 15:04:05")
-		}
-	}
-	return s
+	return model.NormalizeDueDateForDB(s)
 }
 
 // parseLocalToUTC parses local time string in the given location, returns UTC as "yyyy-MM-dd HH:mm:ss".
