@@ -114,3 +114,18 @@ func (r *TaskRepository) UpdateFields(id, userID string, fields map[string]inter
 func (r *TaskRepository) Delete(id, userID string) error {
 	return r.db.Where("id = ? AND user_id = ?", id, userID).Delete(&model.Task{}).Error
 }
+
+// Search returns tasks matching q in title, status in (active, completed), limit results.
+func (r *TaskRepository) Search(userID, q string, limit int) ([]model.Task, error) {
+	if limit <= 0 {
+		limit = 20
+	}
+	pattern := "%" + q + "%"
+	var tasks []model.Task
+	err := r.db.Where("user_id = ? AND (status = ? OR status = ?) AND title LIKE ?",
+		userID, model.TaskStatusActive, model.TaskStatusCompleted, pattern).
+		Order("sort_order").
+		Limit(limit).
+		Find(&tasks).Error
+	return tasks, err
+}
