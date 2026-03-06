@@ -24,6 +24,8 @@ import {
   Flag,
   User,
   Bot,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { AddTaskInput } from "./add-task-input";
 import { DateTimePickerPopover } from "./datetime-picker";
@@ -364,8 +366,18 @@ export function TaskList({
   const ownerForQuery = currentOwner ?? undefined;
 
   const fallback = useTasks(filter, { owner: ownerForQuery });
-  const { tasks, addTask, toggleTask, updateTask, deleteTask, abandonTask, restoreTask, reorderTasks, isLoading } =
-    tasksSource ?? fallback;
+  const {
+    tasks,
+    completedTasks = [],
+    addTask,
+    toggleTask,
+    updateTask,
+    deleteTask,
+    abandonTask,
+    restoreTask,
+    reorderTasks,
+    isLoading,
+  } = tasksSource ?? fallback;
   const [showSkeleton, setShowSkeleton] = useState(false);
   useEffect(() => {
     if (!isLoading) {
@@ -405,12 +417,14 @@ export function TaskList({
   const [editingText, setEditingText] = useState("");
   const [editingDueDateId, setEditingDueDateId] = useState<string | null>(null);
   const [hoverId, setHoverId] = useState<string | null>(null);
+  const [completedExpanded, setCompletedExpanded] = useState(false);
 
   const handleToggle = useCallback(
-    (task: Task) => {
-      if (mode === "default") {
+    (task: Task, itemMode?: "default" | "completed" | "abandoned" | "trash") => {
+      const m = itemMode ?? mode;
+      if (m === "default") {
         toggleTask(task.id);
-      } else if (mode === "completed" || mode === "abandoned" || mode === "trash") {
+      } else if (m === "completed" || m === "abandoned" || m === "trash") {
         restoreTask(task.id);
       }
     },
@@ -482,14 +496,15 @@ export function TaskList({
     [mode, handleEditStart]
   );
 
-  const renderTaskItem = (task: Task) => {
+  const renderTaskItem = (task: Task, itemMode?: "default" | "completed" | "abandoned" | "trash") => {
+    const effectiveMode = itemMode ?? mode;
     const isEditing = editingId === task.id;
     const isHovered = hoverId === task.id;
     const isSelected = selectedId === task.id;
 
     const contextMenuContent = (
       <ContextMenuContent className="w-40">
-        {mode === "default" && (
+        {effectiveMode === "default" && (
           <>
             <ContextMenuItem onClick={() => setEditingDueDateId(task.id)}>
               <Calendar className="size-4" />
@@ -557,7 +572,7 @@ export function TaskList({
             </div>
           </>
         )}
-        {(mode === "completed" || mode === "abandoned" || mode === "trash") && (
+        {(effectiveMode === "completed" || effectiveMode === "abandoned" || effectiveMode === "trash") && (
           <ContextMenuItem onClick={() => restoreTask(task.id)}>
             恢复
           </ContextMenuItem>
@@ -568,9 +583,9 @@ export function TaskList({
           variant="destructive"
         >
           <Trash2 className="size-4" />
-          {mode === "trash" ? "永久删除" : "删除"}
+          {effectiveMode === "trash" ? "永久删除" : "删除"}
         </ContextMenuItem>
-        {mode === "default" && (
+        {effectiveMode === "default" && (
           <ContextMenuItem onClick={() => abandonTask(task.id)}>
             放弃
           </ContextMenuItem>
@@ -593,17 +608,17 @@ export function TaskList({
         onClick={() => handleRowClick(task.id)}
         onDoubleClick={() => handleRowDoubleClick(task)}
       >
-        {mode === "default" && (
+        {effectiveMode === "default" && (
           <GripVertical
             className="size-4 shrink-0 cursor-grab text-muted-foreground/60 opacity-0 transition-opacity group-hover:opacity-100"
             aria-hidden
           />
         )}
         <Checkbox
-          checked={task.completed || mode !== "default"}
-          onCheckedChange={() => handleToggle(task)}
+          checked={task.completed || effectiveMode !== "default"}
+          onCheckedChange={() => handleToggle(task, effectiveMode)}
           aria-label={task.title}
-          className={mode === "default" ? PRIORITY_CHECKBOX_CLASS[task.priority] : undefined}
+          className={effectiveMode === "default" ? PRIORITY_CHECKBOX_CLASS[task.priority] : undefined}
         />
         {isEditing ? (
           <form onSubmit={handleEditSubmit} className="min-w-0 flex-1">
@@ -630,17 +645,17 @@ export function TaskList({
             {task.title}
           </span>
         )}
-        {mode !== "default" && task.owner === "human" && (
+        {effectiveMode !== "default" && task.owner === "human" && (
           <span className="shrink-0 inline-flex" title={OWNER_LABEL.human} aria-label={OWNER_LABEL.human}>
             <User className="size-3.5 text-muted-foreground" />
           </span>
         )}
-        {mode !== "default" && task.owner === "agent" && (
+        {effectiveMode !== "default" && task.owner === "agent" && (
           <span className="shrink-0 inline-flex" title={OWNER_LABEL.agent} aria-label={OWNER_LABEL.agent}>
             <Bot className="size-3.5 text-muted-foreground" />
           </span>
         )}
-        {mode === "default" && (
+        {effectiveMode === "default" && (
           <>
             {showListName && task.listId && (
               <span className="shrink-0 rounded px-1.5 py-0.5 text-xs text-muted-foreground bg-muted/50">
@@ -823,6 +838,39 @@ export function TaskList({
           ))
         )}
       </div>
+
+      {mode === "default" && completedTasks.length > 0 && (
+        <div className="flex flex-col mt-2">
+          <button
+            type="button"
+            onClick={() => setCompletedExpanded((v) => !v)}
+            className="flex items-center gap-2 px-2 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors rounded hover:bg-muted/50 -ml-2"
+            aria-expanded={completedExpanded}
+          >
+            {completedExpanded ? (
+              <ChevronDown className="size-4 shrink-0" aria-hidden />
+            ) : (
+              <ChevronRight className="size-4 shrink-0" aria-hidden />
+            )}
+            <span>已完成 ({completedTasks.length})</span>
+          </button>
+          {completedExpanded && (
+            <div className="flex flex-col">
+              {completedTasks.map((task, index) => (
+                <div key={task.id}>
+                  {index > 0 && (
+                    <div
+                      className="h-px bg-gray-200 dark:bg-gray-700 ml-8"
+                      aria-hidden
+                    />
+                  )}
+                  {renderTaskItem(task, "completed")}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

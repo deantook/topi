@@ -27,9 +27,16 @@ export function TaskPageWithDetail({
   const ownerParam = searchParams.get("owner");
   const owner = ownerParam === "human" || ownerParam === "agent" ? ownerParam : undefined;
 
-  const tasksHook = useTasks(filter, { owner });
-  const { tasks, updateTask } = tasksHook;
-  const selectedTask = selectedId ? tasks.find((t) => t.id === selectedId) ?? null : null;
+  const tasksHook = useTasks(filter, {
+    owner,
+    includeCompleted: mode === "default",
+  });
+  const { tasks, completedTasks = [], updateTask } = tasksHook;
+  const selectedTask = selectedId
+    ? tasks.find((t) => t.id === selectedId) ??
+      completedTasks.find((t) => t.id === selectedId) ??
+      null
+    : null;
 
   const setSelected = (id: string | null) => {
     if (id) {
