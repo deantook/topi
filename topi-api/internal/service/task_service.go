@@ -377,6 +377,21 @@ func (s *TaskService) List(userID, filter string, listID *string, owner *string,
 	return tasks, nil
 }
 
+// Search returns tasks matching q in title (active + completed only), limit 20.
+func (s *TaskService) Search(userID, q string, limit int) ([]model.Task, error) {
+	if q == "" {
+		return nil, nil
+	}
+	q = strings.TrimSpace(q)
+	if q == "" {
+		return nil, nil
+	}
+	if limit <= 0 {
+		limit = 20
+	}
+	return s.repo.Search(userID, q, limit)
+}
+
 func (s *TaskService) Update(userID, id string, title *string, listID *string, dueDate *string, priority *string, detail *string, owner *string, estimatedHours *int, clearEstimatedHours bool, loc *time.Location) error {
 	if _, err := s.repo.GetByIDAndUserID(id, userID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
