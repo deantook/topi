@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** 在 topi-api 中内嵌 MCP SSE server，使 Cursor 能通过 MCP 工具操作 Topi 的待办和清单。
+**Goal:** 在 topi-api 中内嵌 MCP SSE server，使 agent 能通过 MCP 工具操作 Topi 的待办和清单。
 
 **Architecture:** 使用 mark3labs/mcp-go 创建 MCP server，通过 SSE transport 暴露；在建立连接时校验 JWT 并从 context 传递 userID；tool handlers 直接调用 TaskService/ListService。优先尝试将 mcp-go 的 SSE handler 挂载到 Gin；若不可行，则运行独立 HTTP 服务或使用 gin-mcp 等桥接库。
 
@@ -402,14 +402,14 @@ git commit -m "feat(mcp): enforce JWT auth on SSE connection"
 - Modify: `topi-api/.env.example`（若有 MCP 特定配置则添加）
 - Modify: `docs/plans/2026-03-05-mcp-server-design.md` 或新建 `topi-api/docs/MCP.md`
 
-**Step 1: 在文档中说明 Cursor 配置**
+**Step 1: 在文档中说明 agent 配置**
 
 示例：
 
 ```markdown
-## Cursor MCP 配置
+## agent MCP 配置
 
-在 Cursor Settings > Features > MCP 中添加：
+在 agent Settings > Features > MCP 中添加：
 
 - Transport: SSE
 - URL: http://localhost:8080/mcp/sse?token=YOUR_JWT

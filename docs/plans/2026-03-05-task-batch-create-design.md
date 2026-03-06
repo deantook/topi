@@ -4,7 +4,7 @@
 
 ## 概述
 
-为任务增加批量新建能力，主要支持 AI（如 Cursor）一次创建多条任务。新增 `POST /api/v1/tasks/batch` 和 MCP 工具 `topi_create_tasks`，与现有单条接口并存。暂不限制批量大小，全成功或全失败，使用事务保证一致性。
+为任务增加批量新建能力，主要支持 AI（如 agent）一次创建多条任务。新增 `POST /api/v1/tasks/batch` 和 MCP 工具 `topi_create_tasks`，与现有单条接口并存。暂不限制批量大小，全成功或全失败，使用事务保证一致性。
 
 ## 1. API 与数据结构
 

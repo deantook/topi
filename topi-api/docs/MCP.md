@@ -1,10 +1,10 @@
-# Topi MCP (Cursor 配置)
+# Topi MCP (agent 配置)
 
-Topi 通过 MCP (Model Context Protocol) 暴露任务与列表管理工具，可在 Cursor 中配置使用。
+Topi 通过 MCP (Model Context Protocol) 暴露任务与列表管理工具，可在 agent 中配置使用。
 
 ## 传输方式
 
-支持两种传输，Cursor 会优先尝试 Streamable HTTP，失败后回退到 SSE：
+支持两种传输，agent 会优先尝试 Streamable HTTP，失败后回退到 SSE：
 
 - **Streamable HTTP**（推荐）：POST 到 `/mcp/sse`，首次请求自动建立 session
 - **SSE**：GET `/mcp/sse` 建立连接，再 POST 到 `/mcp/message`
@@ -18,9 +18,9 @@ Topi 通过 MCP (Model Context Protocol) 暴露任务与列表管理工具，可
 3. 在「MCP 令牌」区块点击「生成令牌」
 4. 复制显示的令牌（仅显示一次，请妥善保存）
 
-## Cursor 配置示例
+## agent 配置示例
 
-在 Cursor 的 MCP 配置（Cursor Settings → Features → MCP → Open Configuration File）中添加：
+在 agent 的 MCP 配置（Settings → Features → MCP → Open Configuration File）中添加：
 
 ```json
 {
@@ -32,7 +32,7 @@ Topi 通过 MCP (Model Context Protocol) 暴露任务与列表管理工具，可
 }
 ```
 
-将 `YOUR_MCP_TOKEN` 替换为在设置页生成的 MCP 令牌。保存后重启 Cursor，并在 Settings → Tools & MCP 中启用 topi 服务器（SSE 服务器默认需手动启用）。
+将 `YOUR_MCP_TOKEN` 替换为在设置页生成的 MCP 令牌。保存后重启 agent，并在 Settings → Tools & MCP 中启用 topi 服务器（SSE 服务器默认需手动启用）。
 
 ### 可选：使用 Header 传递 Token
 
@@ -68,7 +68,7 @@ Topi 通过 MCP (Model Context Protocol) 暴露任务与列表管理工具，可
 MCP_BASE_URL=http://117.50.220.90:8080
 ```
 
-服务端会在 `endpoint` 事件中下发完整 message URL（含 host），确保 Cursor 客户端向正确地址 POST 请求。未设置时，仅下发路径，部分客户端可能错误解析为 localhost 导致任务创建失败。
+服务端会在 `endpoint` 事件中下发完整 message URL（含 host），确保 agent 客户端向正确地址 POST 请求。未设置时，仅下发路径，部分客户端可能错误解析为 localhost 导致任务创建失败。
 
 ## 认证说明
 
@@ -82,5 +82,5 @@ MCP_BASE_URL=http://117.50.220.90:8080
 
 1. **确认 topi-api 已启动**：访问 `http://localhost:8080/swagger/index.html` 应可打开。
 2. **用 curl 测试 SSE**：`curl -N "http://localhost:8080/mcp/sse?token=YOUR_TOKEN"`，应返回 SSE 流而非 404。
-3. **配置方式**：建议直接编辑 `~/.cursor/mcp.json` 或项目内 `.cursor/mcp.json`，而不是通过 Cursor 的「添加 MCP」 UI，避免 URL 被修改。
-4. **重启 Cursor**：修改配置后需完全退出并重新打开 Cursor。
+3. **配置方式**：建议直接编辑 `~/.cursor/mcp.json` 或项目内 `.cursor/mcp.json`，而不是通过 agent 的「添加 MCP」 UI，避免 URL 被修改。
+4. **重启 agent**：修改配置后需完全退出并重新打开 agent。

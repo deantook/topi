@@ -434,7 +434,7 @@ export async function revokeMcpToken(): Promise<void> {
 
 在 `topi/app/routes/settings.tsx` 中，在 `TaskList` 上方添加卡片区块，包含：
 - 标题「MCP 令牌」
-- 说明文案：用于 Cursor MCP 连接，长期有效
+- 说明文案：用于 agent MCP 连接，长期有效
 - 使用 `useLoaderData` 或 `useFetcher` 获取状态
 - 占位按钮（下一 Task 实现逻辑）
 
@@ -454,16 +454,16 @@ git commit -m "feat(settings): add MCP token section skeleton"
 
 **Step 1: 实现完整逻辑**
 
-- 无令牌：显示「生成令牌」按钮，点击调用 `generateMcpToken()`，弹窗展示 token + 复制按钮 + Cursor 配置示例
+- 无令牌：显示「生成令牌」按钮，点击调用 `generateMcpToken()`，弹窗展示 token + 复制按钮 + agent 配置示例
 - 有令牌：显示 prefix，提供「重新生成」「撤销」；重新生成同生成流程
 - 使用 `useFetcher` 或 state 管理加载/错误
 - 使用 shadcn `Card`、`Button`、`AlertDialog` 或 `Dialog`
 
-**Step 2: Cursor 配置示例文案**
+**Step 2: agent 配置示例文案**
 
 在弹窗中显示：
 ```
-在 Cursor Settings → MCP 中配置：
+在 agent Settings → MCP 中配置：
 {
   "mcpServers": {
     "topi": {
@@ -477,7 +477,7 @@ git commit -m "feat(settings): add MCP token section skeleton"
 
 **Step 3: 手动测试**
 
-登录 → 进入设置页 → 生成令牌 → 复制 → 更新 Cursor MCP 配置 → 验证 MCP 工具可用 → 撤销 → 验证 401
+登录 → 进入设置页 → 生成令牌 → 复制 → 更新 agent MCP 配置 → 验证 MCP 工具可用 → 撤销 → 验证 401
 
 **Step 4: Commit**
 
@@ -497,7 +497,7 @@ git commit -m "feat(settings): complete MCP token generate/revoke UI"
 **Step 1: 更新 MCP.md**
 
 - 移除「从 Local Storage 获取 JWT」的说明
-- 改为：在设置页生成 MCP 令牌，复制到 Cursor 配置
+- 改为：在设置页生成 MCP 令牌，复制到 agent 配置
 - 更新「认证说明」：MCP 仅接受 MCP 令牌，不再接受 JWT
 
 **Step 2: 更新 README（如有）**

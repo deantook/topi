@@ -11,7 +11,7 @@
 - 标题：`# Topi`
 - 一句话：待办任务管理应用，支持 Web 界面与 AI 集成
 - 核心亮点（简要 bullet）：
-  - Cursor MCP 集成：在 Cursor 中创建、更新、列出任务
+  - agent MCP 集成：在 agent 中创建、更新、列出任务
   - 收件箱、今日/明天、自定义列表、已完成/废弃视图
   - 任务详情支持 Markdown 富文本
   - 前后端分离，可自托管部署
@@ -43,11 +43,11 @@
 
 **访问**：前端 http://localhost:5173（开发）/ :3000（Docker），API http://localhost:8080，Swagger `/swagger/index.html`
 
-## 第四节：MCP 与 Cursor
+## 第四节：MCP 与 agent
 
-`## Cursor MCP 集成`
+`## agent MCP 集成`
 
-- 说明：通过 MCP 暴露任务与列表工具，可在 Cursor 中创建、更新、列出任务
+- 说明：通过 MCP 暴露任务与列表工具，可在 agent 中创建、更新、列出任务
 - SSE 传输，URL：`http://localhost:8080/mcp/sse?token=YOUR_JWT`
 - JWT：登录 → 开发者工具 → Local Storage → `token`
 - 配置示例（mcpServers.topi.url）

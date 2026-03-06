@@ -1,16 +1,16 @@
 # Topi
 
-待办任务管理应用，支持 Web 界面与 **Cursor AI 对话管理**：在聊天里自然说「记下来」「今天有什么任务」，AI 会帮你创建、查看、完成任务。
+待办任务管理应用，支持 Web 界面与 **agent AI 对话管理**：在聊天里自然说「记下来」「今天有什么任务」，AI 会帮你创建、查看、完成任务。
 
-## 用 Cursor 对话管理任务
+## 用 agent 对话管理任务
 
-Topi 通过 [MCP](https://modelcontextprotocol.io/) 把任务能力暴露给 Cursor。在 Cursor 里配置好 MCP 后，直接用自然语言和 AI 说需求，AI 会调用 Topi 的接口完成操作。
+Topi 通过 [MCP](https://modelcontextprotocol.io/) 把任务能力暴露给 agent。在 agent 里配置好 MCP 后，直接用自然语言和 AI 说需求，AI 会调用 Topi 的接口完成操作。
 
 ### 配置 MCP（首次使用）
 
 1. 启动 Topi 前端与 API，登录后进入 **设置** 页
 2. 在「MCP 令牌」区块点击「生成令牌」，复制令牌
-3. 打开 Cursor 的 MCP 配置（Settings → Features → MCP → Open Configuration File），添加：
+3. 打开 agent 的 MCP 配置（Settings → Features → MCP → Open Configuration File），添加：
 
 ```json
 {
@@ -22,11 +22,11 @@ Topi 通过 [MCP](https://modelcontextprotocol.io/) 把任务能力暴露给 Cur
 }
 ```
 
-将 `YOUR_MCP_TOKEN` 替换为你的令牌。保存后重启 Cursor，并在 Settings → Tools & MCP 中启用 **topi** 服务器。
+将 `YOUR_MCP_TOKEN` 替换为你的令牌。保存后重启 agent，并在 Settings → Tools & MCP 中启用 **topi** 服务器。
 
 ### 使用 Skills（自然语言触发）
 
-在 Cursor 聊天中，可以用下面这些说法来管理任务，AI 会自动识别并调用对应能力：
+在 agent 聊天中，可以用下面这些说法来管理任务，AI 会自动识别并调用对应能力：
 
 | 你想做的事 | 可以这样说 |
 |------------|------------|
@@ -42,7 +42,7 @@ Topi 通过 [MCP](https://modelcontextprotocol.io/) 把任务能力暴露给 Cur
 
 ### 工作原理
 
-- 你说的「记下来」「今天有什么任务」等会被 Cursor 的 **topi-mcp-tasks** Skill 识别
+- 你说的「记下来」「今天有什么任务」等会被 agent 的 **topi-mcp-tasks** Skill 识别
 - Skill 指导 AI 调用 Topi 的 MCP 工具（如 `topi_create_task`、`topi_list_tasks`）
 - 任务数据与 Web 界面同步，在浏览器里也能查看和编辑
 

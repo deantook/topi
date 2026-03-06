@@ -4,7 +4,7 @@
 
 ## 概述
 
-为 Topi 项目创建 Agent Skill，指导 Cursor agent 在用户表达任务管理意图（如「记下来」「加到待办」「今天有什么任务」）时，正确使用 Topi MCP 工具完成任务操作。
+为 Topi 项目创建 Agent Skill，指导 agent 在用户表达任务管理意图（如「记下来」「加到待办」「今天有什么任务」）时，正确使用 Topi MCP 工具完成任务操作。
 
 ## 1. 设计决策
 
@@ -33,7 +33,7 @@ description: Use Topi MCP tools for task management when user asks to add, list,
 
 ### 3.2 前提条件
 
-- 使用前需确保 Cursor MCP 已配置 topi 服务器（见 `README.md` 或 `topi-api/docs/MCP.md`）
+- 使用前需确保 agent MCP 已配置 topi 服务器（见 `README.md` 或 `topi-api/docs/MCP.md`）
 - 若 MCP 调用失败，提示用户检查：Topi API 是否运行、Token 是否有效
 
 ### 3.3 意图 → 工具映射表

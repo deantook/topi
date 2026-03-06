@@ -4,7 +4,7 @@
 
 ## 概述
 
-在 topi-api 中内嵌 MCP (Model Context Protocol) server，使 Cursor 等 AI 助手能通过 MCP 工具直接操作 Topi 的待办和清单。采用 SSE transport，认证通过 query 参数或 header 携带 JWT，暴露任务和清单的完整 CRUD 能力。
+在 topi-api 中内嵌 MCP (Model Context Protocol) server，使 agent 等 AI 助手能通过 MCP 工具直接操作 Topi 的待办和清单。采用 SSE transport，认证通过 query 参数或 header 携带 JWT，暴露任务和清单的完整 CRUD 能力。
 
 ## 1. 架构
 
@@ -65,14 +65,14 @@ topi-api/internal/
 - 所有 tool 从会话获取 `userID`
 - Service 调用统一传 `userID`
 
-**Token 来源：** 用户从 Topi 前端登录后获取 JWT，在 Cursor MCP 配置的 URL 中附带（如 `?token=xxx`）。
+**Token 来源：** 用户从 Topi 前端登录后获取 JWT，在 agent MCP 配置的 URL 中附带（如 `?token=xxx`）。
 
 **可选：** 支持环境变量 `TOPI_TOKEN` 覆盖，便于本地测试。
 
 ## 4. 数据流与调用链
 
-1. **连接：** Cursor → `GET /mcp/sse?token=JWT` → 校验 → 创建会话（绑定 userID）→ 返回 SSE 流
-2. **调用：** Cursor → `POST /mcp/messages`（session_id + JSON-RPC）→ 路由到 tool handler → 调用 Service → 封装 ToolResult → 返回
+1. **连接：** agent → `GET /mcp/sse?token=JWT` → 校验 → 创建会话（绑定 userID）→ 返回 SSE 流
+2. **调用：** agent → `POST /mcp/messages`（session_id + JSON-RPC）→ 路由到 tool handler → 调用 Service → 封装 ToolResult → 返回
 3. 不经过 `task_handler.go`、`list_handler.go`，直接调用 Service
 4. 时区：复用 `X-Timezone` 或默认 UTC
 

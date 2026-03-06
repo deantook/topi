@@ -128,7 +128,7 @@ func provideRouter(
 		// SSE transport: GET establishes session, POST /message for subsequent requests
 		mcpGroup.GET("/sse", gin.WrapH(mcpServer.SSEHandler()))
 		mcpGroup.POST("/message", gin.WrapH(mcpServer.MessageHandler()))
-		// Streamable HTTP: creates session on first request (Cursor tries this first)
+		// Streamable HTTP: creates session on first request (agent tries this first)
 		mcpGroup.POST("/sse", gin.WrapH(mcpServer.StreamableHTTPHandler()))
 		mcpGroup.GET("", gin.WrapH(mcpServer.StreamableHTTPHandler()))
 		mcpGroup.POST("", gin.WrapH(mcpServer.StreamableHTTPHandler()))

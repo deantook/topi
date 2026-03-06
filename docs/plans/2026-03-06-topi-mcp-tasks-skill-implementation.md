@@ -2,11 +2,11 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Create Agent Skill `topi-mcp-tasks` that guides Cursor agent to use Topi MCP tools when user expresses task management intent.
+**Goal:** Create Agent Skill `topi-mcp-tasks` that guides agent to use Topi MCP tools when user expresses task management intent.
 
 **Architecture:** Layered structure with SKILL.md (triggers, intent mapping, core workflows) and reference.md (full tool params, enums). Project skill at `topi/.cursor/skills/topi-mcp-tasks/`.
 
-**Tech Stack:** Markdown, Cursor Agent Skills format (YAML frontmatter)
+**Tech Stack:** Markdown, Agent Skills format (YAML frontmatter)
 
 **Design Reference:** `docs/plans/2026-03-06-topi-mcp-tasks-skill-design.md`
 

@@ -88,7 +88,7 @@ export default function Settings() {
         <CardHeader>
           <CardTitle>MCP 令牌</CardTitle>
           <CardDescription>
-            用于 Cursor MCP 连接，长期有效。在 Cursor Settings → MCP 中配置 URL 时附带此令牌。
+            用于 agent MCP 连接，长期有效。在 agent Settings → MCP 中配置 URL 时附带此令牌。
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -152,7 +152,7 @@ export default function Settings() {
           <AlertDialogHeader>
             <AlertDialogTitle>撤销 MCP 令牌</AlertDialogTitle>
             <AlertDialogDescription>
-              撤销后，当前 MCP 令牌将立即失效，需重新生成才能使用 Cursor MCP。
+              撤销后，当前 MCP 令牌将立即失效，需重新生成才能使用 agent MCP。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
