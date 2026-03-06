@@ -39,10 +39,14 @@ jobs:
           load: true
           tags: topi-api:latest
 
+      - name: Pull nginx image
+        run: docker pull nginx:alpine
+
       - name: Save images to tar
         run: |
           docker save topi-web:latest | gzip > topi-web.tar.gz
           docker save topi-api:latest | gzip > topi-api.tar.gz
+          docker save nginx:alpine | gzip > nginx.tar.gz
           ls -la *.tar.gz
 
       - name: Copy files to server
@@ -51,7 +55,7 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
-          source: "docker-compose.yml,topi-api/.env,topi-web.tar.gz,topi-api.tar.gz,deploy,pem"
+          source: "docker-compose.yml,topi-api/.env,topi-web.tar.gz,topi-api.tar.gz,nginx.tar.gz,deploy,pem"
           target: ${{ secrets.DEPLOY_PATH }}
 
       - name: Load images and deploy
@@ -64,10 +68,11 @@ jobs:
             set -e
             cd ${{ secrets.DEPLOY_PATH }}
             echo "Loading images..."
-            gunzip -f topi-web.tar.gz topi-api.tar.gz
+            gunzip -f topi-web.tar.gz topi-api.tar.gz nginx.tar.gz
             docker load -i topi-web.tar
             docker load -i topi-api.tar
-            rm -f topi-web.tar topi-api.tar
+            docker load -i nginx.tar
+            rm -f topi-web.tar topi-api.tar nginx.tar
             cp topi-api/.env .env
             echo "Starting containers..."
             docker compose up -d
