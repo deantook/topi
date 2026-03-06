@@ -76,5 +76,7 @@ jobs:
             cp topi-api/.env .env
             echo "Starting containers..."
             docker compose up -d
+            echo "Reloading nginx config..."
+            docker compose exec -T nginx nginx -t && docker compose exec -T nginx nginx -s reload
             docker image prune -f
             echo "Deploy completed"
