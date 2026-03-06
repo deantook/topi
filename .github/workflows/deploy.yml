@@ -1,0 +1,75 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set VITE_API_URL
+        id: apiurl
+        run: |
+          if [ -n "${{ secrets.VITE_API_URL }}" ]; then
+            echo "url=${{ secrets.VITE_API_URL }}" >> $GITHUB_OUTPUT
+          else
+            echo "url=http://${{ secrets.SERVER_HOST }}:8080" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build topi-web
+        uses: docker/build-push-action@v6
+        with:
+          context: ./topi
+          push: false
+          load: true
+          tags: topi-web:latest
+          build-args: |
+            VITE_API_URL=${{ steps.apiurl.outputs.url }}
+
+      - name: Build topi-api
+        uses: docker/build-push-action@v6
+        with:
+          context: ./topi-api
+          push: false
+          load: true
+          tags: topi-api:latest
+
+      - name: Save images to tar
+        run: |
+          docker save topi-web:latest | gzip > topi-web.tar.gz
+          docker save topi-api:latest | gzip > topi-api.tar.gz
+          ls -la *.tar.gz
+
+      - name: Copy files to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          source: "docker-compose.yml,topi-api/.env,topi-web.tar.gz,topi-api.tar.gz"
+          target: ${{ secrets.DEPLOY_PATH }}
+
+      - name: Load images and deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          script: |
+            set -e
+            cd ${{ secrets.DEPLOY_PATH }}
+            echo "Loading images..."
+            gunzip -f topi-web.tar.gz topi-api.tar.gz
+            docker load -i topi-web.tar
+            docker load -i topi-api.tar
+            rm -f topi-web.tar topi-api.tar
+            cp topi-api/.env .env
+            echo "Starting containers..."
+            docker compose up -d
+            docker image prune -f
+            echo "Deploy completed"

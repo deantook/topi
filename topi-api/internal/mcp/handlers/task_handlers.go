@@ -7,9 +7,20 @@ import (
 	"time"
 
 	topimcp "github.com/deantook/topi-api/internal/mcp"
+	"github.com/deantook/topi-api/internal/model"
 	"github.com/deantook/topi-api/internal/service"
 	"github.com/mark3labs/mcp-go/mcp"
 )
+
+// parseEstimatedHoursFromReq extracts estimatedHours from MCP request (number or string). Returns nil if not set or invalid.
+func parseEstimatedHoursFromReq(req mcp.CallToolRequest, key string) (*int, error) {
+	args := req.GetArguments()
+	v, ok := args[key]
+	if !ok || v == nil {
+		return nil, nil
+	}
+	return service.ValidateEstimatedHours(v)
+}
 
 type TaskHandlers struct {
 	TaskSvc *service.TaskService
@@ -26,27 +37,34 @@ func (h *TaskHandlers) ListTasks(ctx context.Context, req mcp.CallToolRequest) (
 	}
 	filter := req.GetString("filter", "all")
 	listID := req.GetString("listId", "")
+	owner := req.GetString("owner", "")
 	var lp *string
 	if listID != "" {
 		lp = &listID
 	}
+	var op *string
+	if owner != "" {
+		op = &owner
+	}
 	date := req.GetString("date", "")
 	startDate := req.GetString("startDate", "")
 	endDate := req.GetString("endDate", "")
-	tasks, err := h.TaskSvc.List(userID, filter, lp, date, startDate, endDate, time.UTC)
+	tasks, err := h.TaskSvc.List(userID, filter, lp, op, date, startDate, endDate, time.UTC)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
 	out := make([]map[string]interface{}, 0, len(tasks))
 	for _, t := range tasks {
 		out = append(out, map[string]interface{}{
-			"id":        t.ID,
-			"title":     t.Title,
-			"completed": t.Completed,
-			"due_date":  t.DueDate,
-			"priority":  t.Priority,
-			"status":    t.Status,
-			"detail":    t.Detail,
+			"id":              t.ID,
+			"title":           t.Title,
+			"completed":       t.Completed,
+			"due_date":        t.DueDate,
+			"priority":        t.Priority,
+			"status":          t.Status,
+			"detail":          t.Detail,
+			"owner":           t.Owner,
+			"estimated_hours": t.EstimatedHours,
 		})
 	}
 	b, _ := json.Marshal(out)
@@ -100,9 +118,21 @@ func (h *TaskHandlers) CreateTasks(ctx context.Context, req mcp.CallToolRequest)
 				inp.Detail = &s
 			}
 		}
+		if v, ok := m["owner"]; ok && v != nil {
+			if s, ok := v.(string); ok {
+				inp.Owner = &s
+			}
+		}
+		if v, ok := m["estimatedHours"]; ok && v != nil {
+			eh, err := service.ValidateEstimatedHours(v)
+			if err != nil {
+				return mcp.NewToolResultError(fmt.Sprintf("task[%d].estimatedHours: %s", i, err.Error())), nil
+			}
+			inp.EstimatedHours = eh
+		}
 		inputs = append(inputs, inp)
 	}
-	created, err := h.TaskSvc.BatchCreate(userID, inputs, time.UTC)
+	created, err := h.TaskSvc.BatchCreate(userID, inputs, model.TaskOwnerAgentPtr(), time.UTC)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
@@ -142,7 +172,17 @@ func (h *TaskHandlers) CreateTask(ctx context.Context, req mcp.CallToolRequest) 
 	if detail != "" {
 		dpDetail = &detail
 	}
-	task, err := h.TaskSvc.Create(userID, title, lp, dp, &priority, dpDetail, time.UTC)
+	owner := model.TaskOwnerAgentPtr()
+	if v := req.GetString("owner", ""); v == "human" {
+		owner = model.TaskOwnerHumanPtr()
+	}
+	var estimatedHours *int
+	if eh, err := parseEstimatedHoursFromReq(req, "estimatedHours"); err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	} else if eh != nil {
+		estimatedHours = eh
+	}
+	task, err := h.TaskSvc.Create(userID, title, lp, dp, &priority, dpDetail, owner, estimatedHours, time.UTC)
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
@@ -181,7 +221,20 @@ func (h *TaskHandlers) UpdateTask(ctx context.Context, req mcp.CallToolRequest) 
 		v := req.GetString("detail", "")
 		detail = &v
 	}
-	if err := h.TaskSvc.Update(userID, id, title, listID, dueDate, priority, detail, time.UTC); err != nil {
+	var owner *string
+	if _, ok := args["owner"]; ok {
+		v := req.GetString("owner", "")
+		owner = &v
+	}
+	var estimatedHours *int
+	if _, ok := args["estimatedHours"]; ok {
+		eh, err := parseEstimatedHoursFromReq(req, "estimatedHours")
+		if err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
+		estimatedHours = eh
+	}
+	if err := h.TaskSvc.Update(userID, id, title, listID, dueDate, priority, detail, owner, estimatedHours, false, time.UTC); err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
 	return mcp.NewToolResultText("task updated"), nil

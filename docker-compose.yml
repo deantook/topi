@@ -1,0 +1,22 @@
+# 生产部署 - 服务器上需创建 .env 配置 DB_DSN 等
+services:
+  topi-api:
+    image: topi-api:latest
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - PORT=8080
+      - GIN_MODE=release
+    ports:
+      - "8080:8080"
+
+  topi-web:
+    image: topi-web:latest
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - topi-api

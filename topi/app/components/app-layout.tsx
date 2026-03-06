@@ -30,7 +30,7 @@ import {
   SidebarInset,
 } from "@/components/ui/sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { useTaskCounts } from "@/hooks/use-tasks";
+import { useDashboard } from "@/hooks/use-dashboard";
 
 const navItems = [
   { to: "/", label: "所有", icon: LayoutList, title: "所有", countKey: "all" as const },
@@ -52,7 +52,18 @@ const footerItems = [
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
-  const counts = useTaskCounts();
+  const { data } = useDashboard();
+  const counts = data?.counts ?? {
+    all: 0,
+    today: 0,
+    tomorrow: 0,
+    recentSeven: 0,
+    inbox: 0,
+    completed: 0,
+    abandoned: 0,
+    trash: 0,
+    list: {},
+  };
 
   return (
     <SidebarProvider>

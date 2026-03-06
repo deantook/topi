@@ -41,16 +41,17 @@ func InitializeServer() (*Server, error) {
 	}
 	authService := service.NewAuthService(userRepository, helper)
 	authHandler := handler.NewAuthHandler(authService)
-	listRepository := repository.NewListRepository(db)
-	listService := service.NewListService(listRepository)
-	listHandler := handler.NewListHandler(listService)
 	taskRepository := repository.NewTaskRepository(db)
 	taskService := service.NewTaskService(taskRepository)
+	listRepository := repository.NewListRepository(db)
+	listService := service.NewListService(listRepository)
+	dashboardHandler := handler.NewDashboardHandler(taskService, listService)
+	listHandler := handler.NewListHandler(listService)
 	taskHandler := handler.NewTaskHandler(taskService)
 	taskHandlers := handlers.NewTaskHandlers(taskService)
 	listHandlers := handlers.NewListHandlers(listService)
-	mcpServer := mcpsetup.NewMCPServer(taskHandlers, listHandlers, helper)
-	engine := provideRouter(configConfig, authHandler, listHandler, taskHandler, mcpServer, helper)
+	mcpServer := mcpsetup.NewMCPServer(configConfig, taskHandlers, listHandlers, helper)
+	engine := provideRouter(configConfig, authHandler, dashboardHandler, listHandler, taskHandler, mcpServer, helper)
 	server := &Server{
 		Engine: engine,
 		Config: configConfig,
@@ -81,6 +82,7 @@ func provideJWT(cfg *config.Config) (*jwt.Helper, error) {
 func provideRouter(
 	cfg *config.Config,
 	authH *handler.AuthHandler,
+	dashboardH *handler.DashboardHandler,
 	listH *handler.ListHandler,
 	taskH *handler.TaskHandler,
 	mcpServer *mcpsetup.MCPServer,
@@ -100,9 +102,11 @@ func provideRouter(
 		auth.Use(middleware.Auth(jwtHelper))
 		auth.Use(middleware.Timezone())
 		{
+			auth.GET("/dashboard", dashboardH.Dashboard)
 			auth.GET("/tasks", taskH.List)
 			auth.POST("/tasks", taskH.Create)
 
+			auth.POST("/tasks/batch", taskH.CreateBatch)
 			auth.POST("/tasks/reorder", taskH.Reorder)
 			auth.PATCH("/tasks/:id", taskH.Update)
 			auth.POST("/tasks/:id/toggle", taskH.Toggle)

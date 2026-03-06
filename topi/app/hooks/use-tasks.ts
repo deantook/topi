@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api";
 
 export type TaskStatus = "active" | "completed" | "abandoned" | "trash";
@@ -16,6 +17,8 @@ export interface Task {
   status: TaskStatus;
   order: number;
   createdAt: string; // ISO string
+  owner: "human" | "agent" | null;
+  estimatedHours: number | null;
 }
 
 /** API response task (snake_case) */
@@ -30,9 +33,9 @@ interface ApiTask {
   status: TaskStatus;
   sort_order: number;
   created_at: string;
+  owner?: string | null;
+  estimated_hours?: number | null;
 }
-
-const TASKS_CHANGED_EVENT = "topi:tasks-changed";
 
 const PRIORITY_ORDER: Record<TaskPriority, number> = {
   high: 0,
@@ -45,6 +48,13 @@ function mapTask(r: ApiTask): Task {
   const p = r.priority as TaskPriority | undefined;
   const priority: TaskPriority =
     p === "none" || p === "low" || p === "medium" || p === "high" ? p : "none";
+  const rawOwner = r.owner;
+  const owner: "human" | "agent" | null =
+    rawOwner === "human" || rawOwner === "agent" ? rawOwner : null;
+  const estimatedHours =
+    typeof r.estimated_hours === "number" && r.estimated_hours >= 1
+      ? r.estimated_hours
+      : null;
   return {
     id: r.id,
     title: r.title,
@@ -56,6 +66,8 @@ function mapTask(r: ApiTask): Task {
     status: r.status,
     order: r.sort_order ?? 0,
     createdAt: r.created_at,
+    owner,
+    estimatedHours,
   };
 }
 
@@ -74,24 +86,31 @@ function toLocalDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function filterToQuery(filter: TaskFilter, refDate: Date): Record<string, string> {
+function filterToQuery(
+  filter: TaskFilter,
+  refDate: Date,
+  owner?: string
+): Record<string, string> {
+  let params: Record<string, string>;
   if (typeof filter === "object" && "listId" in filter) {
-    return { listId: filter.listId };
+    params = { listId: filter.listId };
+  } else {
+    params = { filter: String(filter) };
+    if (filter === "today" || filter === "tomorrow") {
+      const d = new Date(refDate);
+      if (filter === "tomorrow") d.setDate(d.getDate() + 1);
+      params.date = toLocalDateStr(d);
+    } else if (filter === "recent-seven") {
+      const today = new Date(refDate);
+      today.setHours(0, 0, 0, 0);
+      const start = toLocalDateStr(today);
+      const end = new Date(today);
+      end.setDate(end.getDate() + 6);
+      params.startDate = start;
+      params.endDate = toLocalDateStr(end);
+    }
   }
-  const params: Record<string, string> = { filter: String(filter) };
-  if (filter === "today" || filter === "tomorrow") {
-    const d = new Date(refDate);
-    if (filter === "tomorrow") d.setDate(d.getDate() + 1);
-    params.date = toLocalDateStr(d);
-  } else if (filter === "recent-seven") {
-    const today = new Date(refDate);
-    today.setHours(0, 0, 0, 0);
-    const start = toLocalDateStr(today);
-    const end = new Date(today);
-    end.setDate(end.getDate() + 6);
-    params.startDate = start;
-    params.endDate = toLocalDateStr(end);
-  }
+  if (owner === "human" || owner === "agent") params.owner = owner;
   return params;
 }
 
@@ -171,61 +190,65 @@ function filterTasks(tasks: Task[], filter: TaskFilter, refDate: Date): Task[] {
   );
 }
 
-export function useTasks(filter: TaskFilter) {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+export function useTasks(filter: TaskFilter, options?: { owner?: string }) {
+  const queryClient = useQueryClient();
 
   const filterKey =
     typeof filter === "object" && filter !== null && "listId" in filter
       ? `list:${filter.listId}`
       : String(filter);
+  const ownerKey = options?.owner ?? "";
 
-  const fetchTasks = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const params = filterToQuery(filter, new Date());
+  const { data: tasks = [], isLoading } = useQuery({
+    queryKey: ["tasks", filterKey, ownerKey],
+    queryFn: async () => {
+      const params = filterToQuery(filter, new Date(), options?.owner);
       const query = new URLSearchParams(params).toString();
       const path = query ? `/tasks?${query}` : "/tasks";
       const res = (await apiClient.get(path)) as { data: ApiTask[] };
-      const mapped = (res.data ?? []).map(mapTask);
-      setTasks(mapped);
-    } catch (e) {
-      console.error("Failed to fetch tasks:", e);
-      setTasks([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [filterKey]);
+      return (res.data ?? []).map(mapTask);
+    },
+  });
 
-  useEffect(() => {
-    fetchTasks();
-  }, [fetchTasks]);
+  const invalidate = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+  }, [queryClient]);
 
   const filteredTasks = filterTasks(tasks, filter, new Date());
 
   const addTask = useCallback(
     async (
       title: string,
-      options?: { listId?: string; dueDate?: string; priority?: TaskPriority }
+      options?: {
+        listId?: string;
+        dueDate?: string;
+        priority?: TaskPriority;
+        estimatedHours?: number;
+      }
     ) => {
       const body: {
         title: string;
         listId?: string;
         dueDate?: string;
         priority?: string;
+        estimated_hours?: number;
+        owner: "human";
       } = {
         title: title.trim() || "新任务",
+        owner: "human",
       };
       if (options?.listId) body.listId = options.listId;
       if (options?.dueDate) body.dueDate = options.dueDate;
       if (options?.priority) body.priority = options.priority;
+      if (options?.estimatedHours != null && options.estimatedHours >= 1) {
+        body.estimated_hours = options.estimatedHours;
+      }
       try {
         const res = (await apiClient.post("/tasks", body)) as { data: ApiTask };
         if (res?.data) {
-          const newTask = mapTask(res.data);
-          setTasks((prev) => [...prev, newTask]);
-          window.dispatchEvent(new CustomEvent(TASKS_CHANGED_EVENT));
-          return newTask.id;
+          invalidate();
+          return mapTask(res.data).id;
         }
         return "";
       } catch (e) {
@@ -233,36 +256,32 @@ export function useTasks(filter: TaskFilter) {
         return "";
       }
     },
-    []
+    [invalidate]
   );
 
-  const toggleTask = useCallback(async (id: string) => {
-    try {
-      await apiClient.post(`/tasks/${id}/toggle`);
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === id
-            ? {
-                ...t,
-                completed: !t.completed,
-                status: t.completed ? ("active" as const) : ("completed" as const),
-              }
-            : t
-        )
-      );
-      window.dispatchEvent(new CustomEvent(TASKS_CHANGED_EVENT));
-    } catch (e) {
-      console.error("Failed to toggle task:", e);
-      fetchTasks();
-    }
-  }, [fetchTasks]);
+  const toggleTask = useCallback(
+    async (id: string) => {
+      try {
+        await apiClient.post(`/tasks/${id}/toggle`);
+        invalidate();
+      } catch (e) {
+        console.error("Failed to toggle task:", e);
+      }
+    },
+    [invalidate]
+  );
 
   const updateTask = useCallback(
     async (
       id: string,
-      updates: Partial<Pick<Task, "title" | "dueDate" | "listId" | "priority" | "detail">>
+      updates: Partial<
+        Pick<
+          Task,
+          "title" | "dueDate" | "listId" | "priority" | "detail" | "owner" | "estimatedHours"
+        >
+      >
     ) => {
-      const body: Record<string, string | null> = {};
+      const body: Record<string, string | number | boolean | null> = {};
       if (updates.title !== undefined) body.title = updates.title;
       if (updates.listId !== undefined) body.listId = updates.listId;
       if (updates.detail !== undefined) body.detail = updates.detail;
@@ -279,19 +298,23 @@ export function useTasks(filter: TaskFilter) {
           : "";
       }
       if (updates.priority !== undefined) body.priority = updates.priority;
+      if (updates.owner !== undefined) body.owner = updates.owner;
+      if (updates.estimatedHours !== undefined) {
+        if (updates.estimatedHours != null && updates.estimatedHours >= 1) {
+          body.estimated_hours = updates.estimatedHours;
+        } else {
+          body.clear_estimated_hours = true;
+        }
+      }
       if (Object.keys(body).length === 0) return;
       try {
-        setTasks((prev) =>
-          prev.map((t) => (t.id === id ? { ...t, ...updates } : t))
-        );
-        window.dispatchEvent(new CustomEvent(TASKS_CHANGED_EVENT));
         await apiClient.patch(`/tasks/${id}`, body);
+        invalidate();
       } catch (e) {
         console.error("Failed to update task:", e);
-        fetchTasks();
       }
     },
-    [fetchTasks]
+    [invalidate]
   );
 
   const deleteTask = useCallback(
@@ -302,47 +325,37 @@ export function useTasks(filter: TaskFilter) {
         } else {
           await apiClient.post(`/tasks/${id}/trash`);
         }
-        setTasks((prev) => prev.filter((t) => t.id !== id));
-        window.dispatchEvent(new CustomEvent(TASKS_CHANGED_EVENT));
+        invalidate();
       } catch (e) {
         console.error("Failed to delete task:", e);
-        fetchTasks();
       }
     },
-    [fetchTasks]
+    [invalidate]
   );
 
-  const abandonTask = useCallback(async (id: string) => {
-    try {
-      await apiClient.post(`/tasks/${id}/abandon`);
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === id ? { ...t, status: "abandoned" as const } : t
-        )
-      );
-      window.dispatchEvent(new CustomEvent(TASKS_CHANGED_EVENT));
-    } catch (e) {
-      console.error("Failed to abandon task:", e);
-      fetchTasks();
-    }
-  }, [fetchTasks]);
+  const abandonTask = useCallback(
+    async (id: string) => {
+      try {
+        await apiClient.post(`/tasks/${id}/abandon`);
+        invalidate();
+      } catch (e) {
+        console.error("Failed to abandon task:", e);
+      }
+    },
+    [invalidate]
+  );
 
-  const restoreTask = useCallback(async (id: string) => {
-    try {
-      await apiClient.post(`/tasks/${id}/restore`);
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === id
-            ? { ...t, status: "active" as const, completed: false }
-            : t
-        )
-      );
-      window.dispatchEvent(new CustomEvent(TASKS_CHANGED_EVENT));
-    } catch (e) {
-      console.error("Failed to restore task:", e);
-      fetchTasks();
-    }
-  }, [fetchTasks]);
+  const restoreTask = useCallback(
+    async (id: string) => {
+      try {
+        await apiClient.post(`/tasks/${id}/restore`);
+        invalidate();
+      } catch (e) {
+        console.error("Failed to restore task:", e);
+      }
+    },
+    [invalidate]
+  );
 
   const reorderTasks = useCallback(
     async (id: string, newIndex: number) => {
@@ -350,22 +363,12 @@ export function useTasks(filter: TaskFilter) {
       if (idx < 0 || idx === newIndex) return;
       try {
         await apiClient.post("/tasks/reorder", { id, newIndex });
-        const reordered = [...filteredTasks];
-        const [removed] = reordered.splice(idx, 1);
-        reordered.splice(newIndex, 0, removed);
-        setTasks((prev) =>
-          prev.map((t) => {
-            const i = reordered.findIndex((r) => r.id === t.id);
-            return i >= 0 ? { ...t, order: i } : t;
-          })
-        );
-        window.dispatchEvent(new CustomEvent(TASKS_CHANGED_EVENT));
+        invalidate();
       } catch (e) {
         console.error("Failed to reorder tasks:", e);
-        fetchTasks();
       }
     },
-    [filteredTasks, fetchTasks]
+    [filteredTasks, invalidate]
   );
 
   return {
@@ -382,80 +385,3 @@ export function useTasks(filter: TaskFilter) {
   };
 }
 
-export interface TaskCounts {
-  all: number;
-  today: number;
-  tomorrow: number;
-  recentSeven: number;
-  inbox: number;
-  completed: number;
-  abandoned: number;
-  trash: number;
-  list: Record<string, number>;
-}
-
-export function useTaskCounts(): TaskCounts {
-  const [counts, setCounts] = useState<TaskCounts>({
-    all: 0,
-    today: 0,
-    tomorrow: 0,
-    recentSeven: 0,
-    inbox: 0,
-    completed: 0,
-    abandoned: 0,
-    trash: 0,
-    list: {},
-  });
-
-  const fetchCounts = useCallback(() => {
-    const refDate = new Date();
-    Promise.all([
-      apiClient.get("/tasks") as Promise<{ data: ApiTask[] }>,
-      apiClient.get("/tasks?filter=completed") as Promise<{ data: ApiTask[] }>,
-      apiClient.get("/tasks?filter=abandoned") as Promise<{ data: ApiTask[] }>,
-      apiClient.get("/tasks?filter=trash") as Promise<{ data: ApiTask[] }>,
-    ])
-      .then(([allRes, completedRes, abandonedRes, trashRes]) => {
-        const allTasks = (allRes.data ?? []).map(mapTask);
-        const completedTasks = (completedRes.data ?? []).map(mapTask);
-        const abandonedTasks = (abandonedRes.data ?? []).map(mapTask);
-        const trashTasks = (trashRes.data ?? []).map(mapTask);
-
-        const listCounts: Record<string, number> = {};
-        for (const t of allTasks) {
-          if (t.listId) {
-            listCounts[t.listId] = (listCounts[t.listId] ?? 0) + 1;
-          }
-        }
-
-        setCounts({
-          all: allTasks.length,
-          today: filterTasks(allTasks, "today", refDate).length,
-          tomorrow: filterTasks(allTasks, "tomorrow", refDate).length,
-          recentSeven: filterTasks(allTasks, "recent-seven", refDate).length,
-          inbox: filterTasks(allTasks, "inbox", refDate).length,
-          completed: completedTasks.length,
-          abandoned: abandonedTasks.length,
-          trash: trashTasks.length,
-          list: listCounts,
-        });
-      })
-      .catch((e) => {
-        console.error("Failed to fetch task counts:", e);
-      });
-  }, []);
-
-  useEffect(() => {
-    fetchCounts();
-    const onFocus = () => fetchCounts();
-    const onTasksChanged = () => fetchCounts();
-    window.addEventListener("focus", onFocus);
-    window.addEventListener(TASKS_CHANGED_EVENT, onTasksChanged);
-    return () => {
-      window.removeEventListener("focus", onFocus);
-      window.removeEventListener(TASKS_CHANGED_EVENT, onTasksChanged);
-    };
-  }, [fetchCounts]);
-
-  return counts;
-}

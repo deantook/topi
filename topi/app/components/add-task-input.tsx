@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import { CalendarClock, Flag, Plus } from "lucide-react";
+import { CalendarClock, Clock, Flag, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,7 +20,12 @@ export interface AddTaskInputProps {
   filter: TaskFilter;
   onSubmit: (
     text: string,
-    options?: { listId?: string; dueDate?: string; priority?: TaskPriority }
+    options?: {
+      listId?: string;
+      dueDate?: string;
+      priority?: TaskPriority;
+      estimatedHours?: number;
+    }
   ) => void;
 }
 
@@ -32,12 +37,13 @@ export function AddTaskInput({ filter, onSubmit }: AddTaskInputProps) {
   const [input, setInput] = useState("");
   const [addDueDate, setAddDueDate] = useState("");
   const [addPriority, setAddPriority] = useState<TaskPriority>("none");
+  const [addEstimatedHours, setAddEstimatedHours] = useState<number | "">("");
   const [isFocused, setIsFocused] = useState(false);
   const [datePopoverOpen, setDatePopoverOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const showRightControls =
-    isFocused || !!addDueDate || addPriority !== "none";
+    isFocused || !!addDueDate || addPriority !== "none" || addEstimatedHours !== "";
 
   const hideDatePicker = filter === "today" || filter === "tomorrow";
 
@@ -62,6 +68,7 @@ export function AddTaskInput({ filter, onSubmit }: AddTaskInputProps) {
         listId?: string;
         dueDate?: string;
         priority?: TaskPriority;
+        estimatedHours?: number;
       } | undefined;
       if (typeof filter === "object" && "listId" in filter) {
         options = { listId: filter.listId };
@@ -86,13 +93,17 @@ export function AddTaskInput({ filter, onSubmit }: AddTaskInputProps) {
       if (addPriority !== "none") {
         options = { ...options, priority: addPriority };
       }
+      if (addEstimatedHours !== "" && addEstimatedHours >= 1) {
+        options = { ...options, estimatedHours: addEstimatedHours };
+      }
       onSubmit(trimmed, options);
       setInput("");
       setAddDueDate("");
       setAddPriority("none");
+      setAddEstimatedHours("");
       setIsFocused(false);
     },
-    [input, filter, addDueDate, addPriority, onSubmit]
+    [input, filter, addDueDate, addPriority, addEstimatedHours, onSubmit]
   );
 
   return (
@@ -202,6 +213,53 @@ export function AddTaskInput({ filter, onSubmit }: AddTaskInputProps) {
                         fill={p === "none" ? "none" : "currentColor"}
                         strokeWidth={isSelected ? 2 : 1.5}
                       />
+                    </button>
+                  );
+                })}
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="xs"
+                aria-label="预估耗时"
+                className={cn(
+                  "shrink-0 gap-1 text-muted-foreground",
+                  addEstimatedHours !== "" && "text-foreground"
+                )}
+              >
+                <Clock className="size-4" />
+                {addEstimatedHours !== "" && (
+                  <span className="text-xs">{addEstimatedHours}h</span>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              data-add-task-control
+              align="end"
+              className="w-36"
+            >
+              <DropdownMenuLabel className="px-0 text-xs text-muted-foreground">
+                预估耗时（小时）
+              </DropdownMenuLabel>
+              <div className="mt-1.5 flex flex-wrap gap-1 px-2">
+                {[1, 2, 3, 4, 5, 8].map((h) => {
+                  const isSelected = addEstimatedHours === h;
+                  return (
+                    <button
+                      key={h}
+                      type="button"
+                      onClick={() =>
+                        setAddEstimatedHours(isSelected ? "" : h)
+                      }
+                      className={cn(
+                        "rounded px-2 py-1 text-xs transition-all hover:bg-accent",
+                        isSelected && "bg-primary text-primary-foreground"
+                      )}
+                    >
+                      {h}h
                     </button>
                   );
                 })}

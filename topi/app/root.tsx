@@ -6,10 +6,12 @@ import {
   Scripts,
   ScrollRestoration,
 } from "react-router";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 
 import type { Route } from "./+types/root";
 import { ThemeProvider } from "@/components/theme-provider";
+import { queryClient } from "@/lib/query-client";
 import "./app.css";
 
 const themeScript = `
@@ -64,10 +66,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         <ThemeProvider>
-          {children}
-          <Toaster richColors position="top-center" />
-          <ScrollRestoration />
-          <Scripts />
+          <QueryClientProvider client={queryClient}>
+            {children}
+            <Toaster richColors position="top-center" />
+            <ScrollRestoration />
+            <Scripts />
+          </QueryClientProvider>
         </ThemeProvider>
       </body>
     </html>

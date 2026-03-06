@@ -14,6 +14,10 @@ type Config struct {
 	JWTExpireHours int
 	GinMode        string
 	CORSOrigin     string
+	// MCPBaseURL is the full base URL (e.g. http://117.50.220.90:8080) for the MCP SSE server.
+	// When set, the server sends this in the endpoint event so the client POSTs to the correct host.
+	// If empty, only the path is sent; some clients may then incorrectly resolve to localhost.
+	MCPBaseURL string
 }
 
 func Load() (*Config, error) {
@@ -31,6 +35,7 @@ func Load() (*Config, error) {
 		JWTExpireHours: hours,
 		GinMode:        getEnv("GIN_MODE", "debug"),
 		CORSOrigin:     getEnv("CORS_ORIGIN", "*"),
+		MCPBaseURL:     getEnv("MCP_BASE_URL", ""),
 	}
 	return cfg, nil
 }

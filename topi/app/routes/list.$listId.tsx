@@ -1,5 +1,5 @@
 import { useParams } from "react-router";
-import { useCustomLists } from "@/hooks/use-custom-lists";
+import { useListsFromDashboard } from "@/hooks/use-lists-from-dashboard";
 import { TaskPageWithDetail } from "@/components/task-page-with-detail";
 
 export function meta() {
@@ -11,7 +11,7 @@ export function meta() {
 
 export default function ListPage() {
   const { listId } = useParams<"listId">();
-  const { getList } = useCustomLists();
+  const { getList } = useListsFromDashboard();
   const list = listId ? getList(listId) : null;
 
   if (!listId) {

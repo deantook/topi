@@ -12,7 +12,7 @@ import {
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
 import { Input } from "@/components/ui/input";
-import { useCustomLists } from "@/hooks/use-custom-lists";
+import { useListsFromDashboard } from "@/hooks/use-lists-from-dashboard";
 import { cn } from "@/lib/utils";
 
 function CustomListItem({
@@ -127,7 +127,7 @@ export function CustomListsSidebar({
 }: {
   listCounts?: Record<string, number>;
 }) {
-  const { lists, addList, updateList, deleteList } = useCustomLists();
+  const { lists, addList, updateList, deleteList } = useListsFromDashboard();
   const location = useLocation();
   const [isAdding, setIsAdding] = useState(false);
   const [newName, setNewName] = useState("");

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router";
 import {
   DndContext,
   PointerSensor,
@@ -19,7 +20,10 @@ import {
   GripVertical,
   Trash2,
   Calendar,
+  Clock,
   Flag,
+  User,
+  Bot,
 } from "lucide-react";
 import { AddTaskInput } from "./add-task-input";
 import { DateTimePickerPopover } from "./datetime-picker";
@@ -35,11 +39,12 @@ import {
 } from "@/components/ui/context-menu";
 import type { Task, TaskFilter, TaskPriority } from "@/hooks/use-tasks";
 import { useTasks } from "@/hooks/use-tasks";
-import { useCustomLists } from "@/hooks/use-custom-lists";
+import { useListsFromDashboard } from "@/hooks/use-lists-from-dashboard";
 import {
   PRIORITY_LABEL,
   PRIORITY_FLAG_CLASS,
   PRIORITY_CHECKBOX_CLASS,
+  OWNER_LABEL,
 } from "@/lib/task-constants";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -121,7 +126,7 @@ function SortableTaskRow({
   handleEditKeyDown: (e: React.KeyboardEvent, taskId: string) => void;
   handleDelete: (taskId: string) => void;
   abandonTask: (id: string) => void;
-  updateTask: (id: string, updates: Partial<Pick<Task, "title" | "dueDate" | "listId" | "priority">>) => void;
+  updateTask: (id: string, updates: Partial<Pick<Task, "title" | "dueDate" | "listId" | "priority" | "estimatedHours">>) => void;
   getList: (id: string) => { name: string } | undefined;
   setEditingText: (s: string) => void;
   onSelectTask?: (id: string | null) => void;
@@ -156,6 +161,27 @@ function SortableTaskRow({
         <Calendar className="size-4" />
         截止日期
       </ContextMenuItem>
+      <div className="px-2 py-1.5">
+        <ContextMenuLabel className="px-0 text-xs text-muted-foreground">预估耗时（小时）</ContextMenuLabel>
+        <div className="mt-1.5 flex flex-wrap gap-1">
+          {[1, 2, 3, 4, 5, 8].map((h) => {
+            const isSelected = task.estimatedHours === h;
+            return (
+              <button
+                key={h}
+                type="button"
+                onClick={() => updateTask(task.id, { estimatedHours: isSelected ? null : h })}
+                className={cn(
+                  "rounded px-2 py-0.5 text-xs transition-all hover:bg-accent",
+                  isSelected && "bg-primary text-primary-foreground"
+                )}
+              >
+                {h}h
+              </button>
+            );
+          })}
+        </div>
+      </div>
       <div className="px-2 py-1.5">
         <ContextMenuLabel className="px-0 text-xs text-muted-foreground">优先级</ContextMenuLabel>
         <div className="mt-1.5 flex gap-1">
@@ -249,6 +275,25 @@ function SortableTaskRow({
               {getList(task.listId)?.name ?? "·"}
             </span>
           )}
+          {task.owner === "human" && (
+            <span className="shrink-0 inline-flex" title={OWNER_LABEL.human} aria-label={OWNER_LABEL.human}>
+              <User className="size-3.5 text-muted-foreground" />
+            </span>
+          )}
+          {task.owner === "agent" && (
+            <span className="shrink-0 inline-flex" title={OWNER_LABEL.agent} aria-label={OWNER_LABEL.agent}>
+              <Bot className="size-3.5 text-muted-foreground" />
+            </span>
+          )}
+          {task.estimatedHours != null && task.estimatedHours >= 1 && (
+            <span
+              className="shrink-0 inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-xs text-muted-foreground bg-muted/50"
+              title="预估耗时"
+            >
+              <Clock className="size-3" />
+              {task.estimatedHours}h
+            </span>
+          )}
           <DateTimePickerPopover
             value={task.dueDate ?? null}
             onChange={(v) => updateTask(task.id, { dueDate: v })}
@@ -297,6 +342,12 @@ export interface TaskListProps {
 
 const SKELETON_DELAY_MS = 200;
 
+const OWNER_FILTER_OPTIONS: { value: string | null; label: string }[] = [
+  { value: null, label: "全部" },
+  { value: "human", label: "我" },
+  { value: "agent", label: "Agent" },
+];
+
 export function TaskList({
   title,
   filter,
@@ -307,7 +358,12 @@ export function TaskList({
   onSelectTask,
   tasksSource,
 }: TaskListProps) {
-  const fallback = useTasks(filter);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const ownerParam = searchParams.get("owner");
+  const currentOwner = ownerParam === "human" || ownerParam === "agent" ? ownerParam : null;
+  const ownerForQuery = currentOwner ?? undefined;
+
+  const fallback = useTasks(filter, { owner: ownerForQuery });
   const { tasks, addTask, toggleTask, updateTask, deleteTask, abandonTask, restoreTask, reorderTasks, isLoading } =
     tasksSource ?? fallback;
   const [showSkeleton, setShowSkeleton] = useState(false);
@@ -338,7 +394,7 @@ export function TaskList({
     },
     [tasks, reorderTasks]
   );
-  const { getList } = useCustomLists();
+  const { getList } = useListsFromDashboard();
 
   const showListName =
     filter === "all" ||
@@ -439,6 +495,29 @@ export function TaskList({
               <Calendar className="size-4" />
               截止日期
             </ContextMenuItem>
+            <div className="px-2 py-1.5">
+              <ContextMenuLabel className="px-0 text-xs text-muted-foreground">
+                预估耗时（小时）
+              </ContextMenuLabel>
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                {[1, 2, 3, 4, 5, 8].map((h) => {
+                  const isEstSelected = task.estimatedHours === h;
+                  return (
+                    <button
+                      key={h}
+                      type="button"
+                      onClick={() => updateTask(task.id, { estimatedHours: isEstSelected ? null : h })}
+                      className={cn(
+                        "rounded px-2 py-0.5 text-xs transition-all hover:bg-accent",
+                        isEstSelected && "bg-primary text-primary-foreground"
+                      )}
+                    >
+                      {h}h
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
             <div className="px-2 py-1.5">
               <ContextMenuLabel className="px-0 text-xs text-muted-foreground">
                 优先级
@@ -551,11 +630,40 @@ export function TaskList({
             {task.title}
           </span>
         )}
+        {mode !== "default" && task.owner === "human" && (
+          <span className="shrink-0 inline-flex" title={OWNER_LABEL.human} aria-label={OWNER_LABEL.human}>
+            <User className="size-3.5 text-muted-foreground" />
+          </span>
+        )}
+        {mode !== "default" && task.owner === "agent" && (
+          <span className="shrink-0 inline-flex" title={OWNER_LABEL.agent} aria-label={OWNER_LABEL.agent}>
+            <Bot className="size-3.5 text-muted-foreground" />
+          </span>
+        )}
         {mode === "default" && (
           <>
             {showListName && task.listId && (
               <span className="shrink-0 rounded px-1.5 py-0.5 text-xs text-muted-foreground bg-muted/50">
                 {getList(task.listId)?.name ?? "·"}
+              </span>
+            )}
+            {task.owner === "human" && (
+              <span className="shrink-0 inline-flex" title={OWNER_LABEL.human} aria-label={OWNER_LABEL.human}>
+                <User className="size-3.5 text-muted-foreground" />
+              </span>
+            )}
+            {task.owner === "agent" && (
+              <span className="shrink-0 inline-flex" title={OWNER_LABEL.agent} aria-label={OWNER_LABEL.agent}>
+                <Bot className="size-3.5 text-muted-foreground" />
+              </span>
+            )}
+            {task.estimatedHours != null && task.estimatedHours >= 1 && (
+              <span
+                className="shrink-0 inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-xs text-muted-foreground bg-muted/50"
+                title="预估耗时"
+              >
+                <Clock className="size-3" />
+                {task.estimatedHours}h
               </span>
             )}
             <DateTimePickerPopover
@@ -587,10 +695,49 @@ export function TaskList({
     );
   };
 
+  const setOwnerFilter = useCallback(
+    (value: string | null) => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        if (value === null) {
+          next.delete("owner");
+        } else {
+          next.set("owner", value);
+        }
+        return next;
+      });
+    },
+    [setSearchParams]
+  );
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-2 pl-7">
-        <h2 className="text-lg font-semibold">{title}</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold">{title}</h2>
+          {mode === "default" && (
+            <div className="flex rounded-md border border-input bg-muted/30 p-0.5" role="tablist" aria-label="按创建者筛选">
+              {OWNER_FILTER_OPTIONS.map(({ value, label }) => {
+                const isActive = currentOwner === value;
+                return (
+                  <button
+                    key={value ?? "all"}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    onClick={() => setOwnerFilter(value)}
+                    className={cn(
+                      "rounded px-2 py-0.5 text-xs font-medium transition-colors",
+                      isActive ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
         {showSort && (
           <Button variant="ghost" size="icon-sm" aria-label="排序">
             <span className="text-xs">1↓</span>

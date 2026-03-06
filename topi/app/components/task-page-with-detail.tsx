@@ -24,8 +24,10 @@ export function TaskPageWithDetail({
 }: TaskPageWithDetailProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedId = searchParams.get("selected");
+  const ownerParam = searchParams.get("owner");
+  const owner = ownerParam === "human" || ownerParam === "agent" ? ownerParam : undefined;
 
-  const tasksHook = useTasks(filter);
+  const tasksHook = useTasks(filter, { owner });
   const { tasks, updateTask } = tasksHook;
   const selectedTask = selectedId ? tasks.find((t) => t.id === selectedId) ?? null : null;
 
@@ -58,6 +60,16 @@ export function TaskPageWithDetail({
         onSaveDetail={(id, detail) =>
           updateTask(id, { detail }).catch(() => {
             toast.error("保存失败，请重试");
+          })
+        }
+        onUpdateOwner={(id, owner) =>
+          updateTask(id, { owner }).catch(() => {
+            toast.error("更新失败，请重试");
+          })
+        }
+        onUpdateEstimatedHours={(id, estimatedHours) =>
+          updateTask(id, { estimatedHours }).catch(() => {
+            toast.error("更新失败，请重试");
           })
         }
       />
