@@ -120,7 +120,9 @@ func provideRouter(
 	mcpGroup.Use(middleware.InjectUserIDForMCP())
 	{
 		mcpGroup.GET("/sse", gin.WrapH(mcpServer.SSEHandler()))
+		mcpGroup.POST("/sse", gin.WrapH(mcpServer.MessageHandler()))
 		mcpGroup.POST("/message", gin.WrapH(mcpServer.MessageHandler()))
+		mcpGroup.POST("", gin.WrapH(mcpServer.MessageHandler()))
 	}
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
