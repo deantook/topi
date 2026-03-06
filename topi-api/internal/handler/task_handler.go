@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/deantook/topi-api/internal/model"
@@ -42,6 +43,26 @@ func NewTaskHandler(svc *service.TaskService) *TaskHandler {
 func (h *TaskHandler) List(c *gin.Context) {
 	userID := c.GetString(middleware.UserIDKey)
 	filter := c.DefaultQuery("filter", "all")
+	q := strings.TrimSpace(c.Query("q"))
+	if q != "" {
+		loc := time.UTC
+		if val, exists := c.Get(timezone.ContextKey); exists && val != nil {
+			if l, ok := val.(*time.Location); ok {
+				loc = l
+			}
+		}
+		tasks, err := h.svc.Search(userID, q, 20)
+		if err != nil {
+			response.Error(c, http.StatusInternalServerError, err.Error())
+			return
+		}
+		out := make([]map[string]interface{}, 0, len(tasks))
+		for _, t := range tasks {
+			out = append(out, formatTaskForResponse(t, loc))
+		}
+		response.OK(c, out)
+		return
+	}
 	listID := c.Query("listId")
 	owner := c.Query("owner")
 	date := c.Query("date")
