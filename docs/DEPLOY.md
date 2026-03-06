@@ -4,7 +4,7 @@
 
 推送代码到 `main` 分支或手动触发后，流水线会在 GitHub 上构建镜像、导出为 tar、上传到服务器并加载运行，**服务器无需访问 GitHub/外网**。
 
-Nginx 作为反向代理，提供 HTTPS，支持域名 **www.lulumia.com** 及 **\*.lulumia.fun**。
+Nginx 作为反向代理，提供 HTTPS。当前启用 **\*.lulumia.fun**；添加 `pem/www.lulumia.com.*` 后可启用 www.lulumia.com（见 `deploy/servers/lulumia.com.conf.disabled`）。
 
 ### 1. 配置 GitHub Secrets
 
@@ -16,16 +16,16 @@ Nginx 作为反向代理，提供 HTTPS，支持域名 **www.lulumia.com** 及 *
 | `SERVER_USER` | ✅ | SSH 登录用户名 | `deploy` |
 | `SERVER_PASSWORD` | ✅ | SSH 登录密码 | `your-password` |
 | `DEPLOY_PATH` | ✅ | 部署目录（需已创建） | `/var/www/topi` |
-| `VITE_API_URL` | | 前端调用的 API 地址（构建时注入，默认 `https://www.lulumia.com`） | `https://www.lulumia.com` |
+| `VITE_API_URL` | | 前端调用的 API 地址（构建时注入，默认 `https://www.lulumia.fun`） | `https://www.lulumia.fun` |
 
 ### 2. 证书（pem/）
 
 部署需 SSL 证书，将证书放入 `pem/` 目录：
 
-| 域名 | 证书文件 | 密钥文件 |
-|------|----------|----------|
-| www.lulumia.com | `pem/www.lulumia.com.pem` | `pem/www.lulumia.com.key` |
-| \*.lulumia.fun | `pem/_.lulumia.fun.pem` | `pem/_.lulumia.fun.key` |
+| 域名 | 证书文件 | 密钥文件 | 状态 |
+|------|----------|----------|------|
+| \*.lulumia.fun | `pem/_.lulumia.fun.pem` | `pem/_.lulumia.fun.key` | 已启用 |
+| www.lulumia.com | `pem/www.lulumia.com.pem` | `pem/www.lulumia.com.key` | 需添加证书后启用 `deploy/servers/lulumia.com.conf.disabled` → `.conf` |
 
 证书需提交到仓库或通过其他方式在首次部署前放入服务器 `$DEPLOY_PATH/pem/`。
 
@@ -48,7 +48,7 @@ DB_DSN=user:pass@tcp(mysql-host:3306)/topi?charset=utf8mb4&parseTime=True
 JWT_SECRET=your-production-secret
 JWT_EXPIRE_HOURS=168
 GIN_MODE=release
-CORS_ORIGIN=https://www.lulumia.com
+CORS_ORIGIN=https://www.lulumia.fun
 EOF
 ```
 

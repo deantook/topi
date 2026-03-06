@@ -18,7 +18,7 @@ jobs:
           if [ -n "${{ secrets.VITE_API_URL }}" ]; then
             echo "url=${{ secrets.VITE_API_URL }}" >> $GITHUB_OUTPUT
           else
-            echo "url=https://www.lulumia.com" >> $GITHUB_OUTPUT
+            echo "url=https://www.lulumia.fun" >> $GITHUB_OUTPUT
           fi
 
       - name: Build topi-web
