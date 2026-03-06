@@ -119,10 +119,15 @@ func provideRouter(
 	mcpGroup.Use(middleware.McpAuth(mcpTokenSvc))
 	mcpGroup.Use(middleware.InjectUserIDForMCP())
 	{
+		// SSE transport: GET establishes session, POST /message for subsequent requests
 		mcpGroup.GET("/sse", gin.WrapH(mcpServer.SSEHandler()))
-		mcpGroup.POST("/sse", gin.WrapH(mcpServer.MessageHandler()))
 		mcpGroup.POST("/message", gin.WrapH(mcpServer.MessageHandler()))
-		mcpGroup.POST("", gin.WrapH(mcpServer.MessageHandler()))
+		// Streamable HTTP: creates session on first request (Cursor tries this first)
+		mcpGroup.POST("/sse", gin.WrapH(mcpServer.StreamableHTTPHandler()))
+		mcpGroup.GET("", gin.WrapH(mcpServer.StreamableHTTPHandler()))
+		mcpGroup.POST("", gin.WrapH(mcpServer.StreamableHTTPHandler()))
+		mcpGroup.GET("/", gin.WrapH(mcpServer.StreamableHTTPHandler()))
+		mcpGroup.POST("/", gin.WrapH(mcpServer.StreamableHTTPHandler()))
 	}
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

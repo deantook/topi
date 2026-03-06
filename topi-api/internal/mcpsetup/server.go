@@ -11,9 +11,10 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
-// MCPServer wraps the MCP SSE server and its HTTP handlers for mounting on Gin.
+// MCPServer wraps the MCP SSE server, Streamable HTTP server, and handlers for mounting on Gin.
 type MCPServer struct {
-	sseServer *server.SSEServer
+	sseServer         *server.SSEServer
+	streamableServer  *server.StreamableHTTPServer
 }
 
 // SSEHandler returns an http.Handler for the SSE endpoint (GET /mcp/sse).
@@ -24,6 +25,12 @@ func (m *MCPServer) SSEHandler() http.Handler {
 // MessageHandler returns an http.Handler for the message endpoint (POST /mcp/message).
 func (m *MCPServer) MessageHandler() http.Handler {
 	return m.sseServer.MessageHandler()
+}
+
+// StreamableHTTPHandler returns an http.Handler for Streamable HTTP transport.
+// It creates sessions on first request (no "Missing sessionId" error).
+func (m *MCPServer) StreamableHTTPHandler() http.Handler {
+	return m.streamableServer
 }
 
 // NewMCPServer creates and configures the MCP server with all Topi tools.
@@ -160,6 +167,7 @@ func NewMCPServer(cfg *config.Config, taskH *handlers.TaskHandlers, listH *handl
 		opts = append(opts, server.WithBaseURL(baseURL))
 	}
 	sseServer := server.NewSSEServer(s, opts...)
+	streamableServer := server.NewStreamableHTTPServer(s)
 
-	return &MCPServer{sseServer: sseServer}
+	return &MCPServer{sseServer: sseServer, streamableServer: streamableServer}
 }

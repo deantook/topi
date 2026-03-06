@@ -188,10 +188,19 @@ const docTemplate = `{
                 "title"
             ],
             "properties": {
+                "detail": {
+                    "type": "string"
+                },
                 "dueDate": {
                     "type": "string"
                 },
+                "estimated_hours": {
+                    "type": "integer"
+                },
                 "listId": {
+                    "type": "string"
+                },
+                "owner": {
                     "type": "string"
                 },
                 "priority": {

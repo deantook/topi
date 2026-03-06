@@ -13,7 +13,7 @@ func McpAuth(mcpTokenSvc *service.McpTokenService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := c.Query("token")
 		if token == "" {
-			if auth := c.GetHeader("Authorization"); auth != "" && strings.HasPrefix(auth, "Bearer ") {
+			if auth := c.GetHeader("Authorization"); auth != "" {
 				token = strings.TrimPrefix(auth, "Bearer ")
 			}
 		}

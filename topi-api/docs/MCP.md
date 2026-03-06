@@ -4,8 +4,12 @@ Topi 通过 MCP (Model Context Protocol) 暴露任务与列表管理工具，可
 
 ## 传输方式
 
-- **Transport**: SSE (Server-Sent Events)
-- **URL**: `http://localhost:8080/mcp/sse?token=YOUR_MCP_TOKEN`
+支持两种传输，Cursor 会优先尝试 Streamable HTTP，失败后回退到 SSE：
+
+- **Streamable HTTP**（推荐）：POST 到 `/mcp/sse`，首次请求自动建立 session
+- **SSE**：GET `/mcp/sse` 建立连接，再 POST 到 `/mcp/message`
+
+**URL**: `http://localhost:8080/mcp/sse?token=YOUR_MCP_TOKEN`
 
 ## 获取 MCP 令牌
 
@@ -71,3 +75,12 @@ MCP_BASE_URL=http://117.50.220.90:8080
 - MCP 使用专用 MCP 令牌认证，与登录 JWT 分离
 - 在设置页生成 MCP 令牌，长期有效，除非主动撤销
 - Token 可通过 query 参数 `token` 或 `Authorization: Bearer <token>` 传递
+
+## 故障排查
+
+若连接失败，按以下步骤检查：
+
+1. **确认 topi-api 已启动**：访问 `http://localhost:8080/swagger/index.html` 应可打开。
+2. **用 curl 测试 SSE**：`curl -N "http://localhost:8080/mcp/sse?token=YOUR_TOKEN"`，应返回 SSE 流而非 404。
+3. **配置方式**：建议直接编辑 `~/.cursor/mcp.json` 或项目内 `.cursor/mcp.json`，而不是通过 Cursor 的「添加 MCP」 UI，避免 URL 被修改。
+4. **重启 Cursor**：修改配置后需完全退出并重新打开 Cursor。

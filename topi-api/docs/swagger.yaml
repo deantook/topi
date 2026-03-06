@@ -2,9 +2,15 @@ basePath: /api/v1
 definitions:
   handler.CreateTaskReq:
     properties:
+      detail:
+        type: string
       dueDate:
         type: string
+      estimated_hours:
+        type: integer
       listId:
+        type: string
+      owner:
         type: string
       priority:
         type: string
