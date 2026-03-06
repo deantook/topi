@@ -86,10 +86,23 @@ function toLocalDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+/** 清单视图：all, today, tomorrow, recent-seven, inbox, 或 { listId } */
+function isListView(filter: TaskFilter): boolean {
+  return (
+    filter === "all" ||
+    filter === "today" ||
+    filter === "tomorrow" ||
+    filter === "recent-seven" ||
+    filter === "inbox" ||
+    (typeof filter === "object" && "listId" in filter)
+  );
+}
+
 function filterToQuery(
   filter: TaskFilter,
   refDate: Date,
-  owner?: string
+  owner?: string,
+  includeCompleted?: boolean
 ): Record<string, string> {
   let params: Record<string, string>;
   if (typeof filter === "object" && "listId" in filter) {
@@ -111,6 +124,9 @@ function filterToQuery(
     }
   }
   if (owner === "human" || owner === "agent") params.owner = owner;
+  if (includeCompleted === true && isListView(filter)) {
+    params.includeCompleted = "true";
+  }
   return params;
 }
 
@@ -203,19 +219,44 @@ function filterTasks(tasks: Task[], filter: TaskFilter, refDate: Date): Task[] {
   });
 }
 
-export function useTasks(filter: TaskFilter, options?: { owner?: string }) {
+function sortActiveTasks(tasks: Task[], isActiveView: boolean): Task[] {
+  return [...tasks].sort((a, b) => {
+    if (isActiveView && a.completed !== b.completed) {
+      return a.completed ? 1 : -1;
+    }
+    return (
+      PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority] || a.order - b.order
+    );
+  });
+}
+
+function sortCompletedTasks(tasks: Task[]): Task[] {
+  return [...tasks].sort((a, b) => a.order - b.order);
+}
+
+export function useTasks(
+  filter: TaskFilter,
+  options?: { owner?: string; includeCompleted?: boolean }
+) {
   const queryClient = useQueryClient();
+  const refDate = new Date();
 
   const filterKey =
     typeof filter === "object" && filter !== null && "listId" in filter
       ? `list:${filter.listId}`
       : String(filter);
   const ownerKey = options?.owner ?? "";
+  const includeCompleted = options?.includeCompleted === true;
 
   const { data: tasks = [], isLoading } = useQuery({
-    queryKey: ["tasks", filterKey, ownerKey],
+    queryKey: ["tasks", filterKey, ownerKey, includeCompleted],
     queryFn: async () => {
-      const params = filterToQuery(filter, new Date(), options?.owner);
+      const params = filterToQuery(
+        filter,
+        refDate,
+        options?.owner,
+        options?.includeCompleted
+      );
       const query = new URLSearchParams(params).toString();
       const path = query ? `/tasks?${query}` : "/tasks";
       const res = (await apiClient.get(path)) as { data: ApiTask[] };
@@ -228,7 +269,19 @@ export function useTasks(filter: TaskFilter, options?: { owner?: string }) {
     queryClient.invalidateQueries({ queryKey: ["dashboard"] });
   }, [queryClient]);
 
-  const filteredTasks = filterTasks(tasks, filter, new Date());
+  // 当 includeCompleted 时，不调用 filterTasks（会过滤掉 completed）。按 status 分组后各自排序。
+  const isListViewFilter = isListView(filter);
+  let activeTasks: Task[];
+  let completedTasks: Task[];
+  if (includeCompleted && isListViewFilter) {
+    const active = tasks.filter((t) => t.status !== "completed");
+    const completed = tasks.filter((t) => t.status === "completed");
+    activeTasks = sortActiveTasks(active, true);
+    completedTasks = sortCompletedTasks(completed);
+  } else {
+    activeTasks = filterTasks(tasks, filter, refDate);
+    completedTasks = [];
+  }
 
   const addTask = useCallback(
     async (
@@ -372,7 +425,7 @@ export function useTasks(filter: TaskFilter, options?: { owner?: string }) {
 
   const reorderTasks = useCallback(
     async (id: string, newIndex: number) => {
-      const idx = filteredTasks.findIndex((t) => t.id === id);
+      const idx = activeTasks.findIndex((t) => t.id === id);
       if (idx < 0 || idx === newIndex) return;
       try {
         await apiClient.post("/tasks/reorder", { id, newIndex });
@@ -381,11 +434,13 @@ export function useTasks(filter: TaskFilter, options?: { owner?: string }) {
         console.error("Failed to reorder tasks:", e);
       }
     },
-    [filteredTasks, invalidate]
+    [activeTasks, invalidate]
   );
 
   return {
-    tasks: filteredTasks,
+    tasks: activeTasks,
+    activeTasks,
+    completedTasks,
     allTasks: tasks,
     addTask,
     toggleTask,
