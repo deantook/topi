@@ -436,6 +436,76 @@ export function useTasks(
     [invalidate]
   );
 
+  const batchTrash = useCallback(
+    async (ids: string[]) => {
+      if (ids.length === 0) return;
+      try {
+        await apiClient.post("/tasks/batch/trash", { ids });
+        invalidate();
+      } catch (e) {
+        console.error("Batch trash failed:", e);
+        throw e;
+      }
+    },
+    [invalidate]
+  );
+
+  const batchAbandon = useCallback(
+    async (ids: string[]) => {
+      if (ids.length === 0) return;
+      try {
+        await apiClient.post("/tasks/batch/abandon", { ids });
+        invalidate();
+      } catch (e) {
+        console.error("Batch abandon failed:", e);
+        throw e;
+      }
+    },
+    [invalidate]
+  );
+
+  const batchToggle = useCallback(
+    async (ids: string[]) => {
+      if (ids.length === 0) return;
+      try {
+        await apiClient.post("/tasks/batch/toggle", { ids });
+        invalidate();
+      } catch (e) {
+        console.error("Batch toggle failed:", e);
+        throw e;
+      }
+    },
+    [invalidate]
+  );
+
+  const batchRestore = useCallback(
+    async (ids: string[]) => {
+      if (ids.length === 0) return;
+      try {
+        await apiClient.post("/tasks/batch/restore", { ids });
+        invalidate();
+      } catch (e) {
+        console.error("Batch restore failed:", e);
+        throw e;
+      }
+    },
+    [invalidate]
+  );
+
+  const batchMove = useCallback(
+    async (ids: string[], listId: string | null) => {
+      if (ids.length === 0) return;
+      try {
+        await apiClient.post("/tasks/batch/move", { ids, listId });
+        invalidate();
+      } catch (e) {
+        console.error("Batch move failed:", e);
+        throw e;
+      }
+    },
+    [invalidate]
+  );
+
   const reorderTasks = useCallback(
     async (id: string, newIndex: number) => {
       const idx = activeTasks.findIndex((t) => t.id === id);
@@ -462,6 +532,11 @@ export function useTasks(
     clearTrash: filter === "trash" ? clearTrash : undefined,
     abandonTask,
     restoreTask,
+    batchTrash,
+    batchAbandon,
+    batchToggle,
+    batchRestore,
+    batchMove,
     reorderTasks,
     isLoading,
   };
