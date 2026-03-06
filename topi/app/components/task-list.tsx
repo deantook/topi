@@ -50,6 +50,7 @@ import {
 } from "@/lib/task-constants";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 
 const WEEKDAY_NAMES = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
 
@@ -105,7 +106,7 @@ function SortableTaskRow({
   handleEditStart,
   handleEditSubmit,
   handleEditKeyDown,
-  handleDelete,
+  onRequestDelete,
   abandonTask,
   updateTask,
   getList,
@@ -126,7 +127,7 @@ function SortableTaskRow({
   handleEditStart: (task: Task) => void;
   handleEditSubmit: (e: React.FormEvent) => void;
   handleEditKeyDown: (e: React.KeyboardEvent, taskId: string) => void;
-  handleDelete: (taskId: string) => void;
+  onRequestDelete: (taskId: string) => void;
   abandonTask: (id: string) => void;
   updateTask: (id: string, updates: Partial<Pick<Task, "title" | "dueDate" | "listId" | "priority" | "estimatedHours">>) => void;
   getList: (id: string) => { name: string } | undefined;
@@ -214,7 +215,7 @@ function SortableTaskRow({
         </div>
       </div>
       <ContextMenuSeparator />
-      <ContextMenuItem onClick={() => handleDelete(task.id)} variant="destructive">
+      <ContextMenuItem onClick={() => onRequestDelete(task.id)} variant="destructive">
         <Trash2 className="size-4" />
         删除
       </ContextMenuItem>
@@ -418,6 +419,7 @@ export function TaskList({
   const [editingDueDateId, setEditingDueDateId] = useState<string | null>(null);
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [completedExpanded, setCompletedExpanded] = useState(false);
+  const [deleteConfirmTaskId, setDeleteConfirmTaskId] = useState<string | null>(null);
 
   const handleToggle = useCallback(
     (task: Task, itemMode?: "default" | "completed" | "abandoned" | "trash") => {
@@ -579,7 +581,7 @@ export function TaskList({
         )}
         <ContextMenuSeparator />
         <ContextMenuItem
-          onClick={() => handleDelete(task.id)}
+          onClick={() => setDeleteConfirmTaskId(task.id)}
           variant="destructive"
         >
           <Trash2 className="size-4" />
@@ -810,7 +812,7 @@ export function TaskList({
                   handleEditStart={handleEditStart}
                   handleEditSubmit={handleEditSubmit}
                   handleEditKeyDown={handleEditKeyDown}
-                  handleDelete={handleDelete}
+                  onRequestDelete={(id) => setDeleteConfirmTaskId(id)}
                   abandonTask={abandonTask}
                   updateTask={updateTask}
                   getList={getList}
@@ -871,6 +873,22 @@ export function TaskList({
           )}
         </div>
       )}
+      <DeleteConfirmDialog
+        open={deleteConfirmTaskId !== null}
+        onOpenChange={(open) => !open && setDeleteConfirmTaskId(null)}
+        title={mode === "trash" ? "永久删除此任务？" : "移至垃圾桶？"}
+        description={
+          mode === "trash"
+            ? "永久删除后无法恢复。"
+            : "移至垃圾桶后可恢复。"
+        }
+        confirmLabel={mode === "trash" ? "永久删除" : "删除"}
+        onConfirm={() => {
+          if (deleteConfirmTaskId) {
+            handleDelete(deleteConfirmTaskId);
+          }
+        }}
+      />
     </div>
   );
 }
