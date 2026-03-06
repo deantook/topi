@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router";
 import {
   LayoutList,
@@ -11,6 +12,7 @@ import {
   Settings,
   Menu,
   LogOut,
+  Search,
 } from "lucide-react";
 import { logout } from "@/lib/auth";
 import { CustomListsSidebar } from "@/components/custom-lists-sidebar";
@@ -30,6 +32,7 @@ import {
   SidebarInset,
 } from "@/components/ui/sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { TaskSearchCommand } from "@/components/task-search-command";
 import { useDashboard } from "@/hooks/use-dashboard";
 
 const navItems = [
@@ -52,7 +55,19 @@ const footerItems = [
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
+  const [searchOpen, setSearchOpen] = useState(false);
   const { data } = useDashboard();
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setSearchOpen((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
   const counts = data?.counts ?? {
     all: 0,
     today: 0,
@@ -67,9 +82,25 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider>
+      <TaskSearchCommand open={searchOpen} onOpenChange={setSearchOpen} />
       <Sidebar side="left" collapsible="icon">
         <SidebarContent>
-          <SidebarGroup className="pt-6">
+          <SidebarGroup className="pt-2">
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => setSearchOpen(true)}
+                    tooltip="搜索任务 (⌘K)"
+                  >
+                    <Search className="size-4" />
+                    <span>搜索</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+          <SidebarGroup className="pt-2">
             <SidebarGroupContent>
               <SidebarMenu>
                 {navItems.map((item) => {
