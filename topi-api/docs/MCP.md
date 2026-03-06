@@ -5,14 +5,14 @@ Topi 通过 MCP (Model Context Protocol) 暴露任务与列表管理工具，可
 ## 传输方式
 
 - **Transport**: SSE (Server-Sent Events)
-- **URL**: `http://localhost:8080/mcp/sse?token=YOUR_JWT`
+- **URL**: `http://localhost:8080/mcp/sse?token=YOUR_MCP_TOKEN`
 
-## 获取 JWT Token
+## 获取 MCP 令牌
 
 1. 启动 Topi 前端与 API
-2. 在前端登录
-3. 打开浏览器开发者工具 → Application → Local Storage
-4. 找到 `token` 键，复制其值即为 JWT
+2. 在前端登录，进入 **设置** 页
+3. 在「MCP 令牌」区块点击「生成令牌」
+4. 复制显示的令牌（仅显示一次，请妥善保存）
 
 ## Cursor 配置示例
 
@@ -22,13 +22,13 @@ Topi 通过 MCP (Model Context Protocol) 暴露任务与列表管理工具，可
 {
   "mcpServers": {
     "topi": {
-      "url": "http://localhost:8080/mcp/sse?token=YOUR_JWT"
+      "url": "http://localhost:8080/mcp/sse?token=YOUR_MCP_TOKEN"
     }
   }
 }
 ```
 
-将 `YOUR_JWT` 替换为实际 token。保存后重启 Cursor，并在 Settings → Tools & MCP 中启用 topi 服务器（SSE 服务器默认需手动启用）。
+将 `YOUR_MCP_TOKEN` 替换为在设置页生成的 MCP 令牌。保存后重启 Cursor，并在 Settings → Tools & MCP 中启用 topi 服务器（SSE 服务器默认需手动启用）。
 
 ### 可选：使用 Header 传递 Token
 
@@ -40,22 +40,12 @@ Topi 通过 MCP (Model Context Protocol) 暴露任务与列表管理工具，可
     "topi": {
       "url": "http://localhost:8080/mcp/sse",
       "headers": {
-        "Authorization": "Bearer YOUR_JWT"
+        "Authorization": "Bearer YOUR_MCP_TOKEN"
       }
     }
   }
 }
 ```
-
-## 本地测试（可选）
-
-若环境支持通过环境变量注入 token（如 `TOPI_TOKEN`），可将 URL 配置为：
-
-```
-http://localhost:8080/mcp/sse?token=${TOPI_TOKEN}
-```
-
-具体是否支持取决于 MCP 客户端实现。
 
 ## 任务工具参数
 
@@ -78,6 +68,6 @@ MCP_BASE_URL=http://117.50.220.90:8080
 
 ## 认证说明
 
-- MCP  endpoint 与 REST API 使用相同的 JWT 认证
+- MCP 使用专用 MCP 令牌认证，与登录 JWT 分离
+- 在设置页生成 MCP 令牌，长期有效，除非主动撤销
 - Token 可通过 query 参数 `token` 或 `Authorization: Bearer <token>` 传递
-- Token 过期后需重新登录获取新 token 并更新配置
