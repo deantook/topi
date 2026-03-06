@@ -11,34 +11,9 @@ import (
 	"gorm.io/gorm"
 )
 
-<<<<<<< Updated upstream
 // normalizeDateTimeString accepts yyyy-MM-dd, yyyy-MM-dd HH:mm:ss, ISO8601, etc., outputs yyyy-MM-dd HH:mm:ss.
 func normalizeDateTimeString(s string) string {
 	return model.NormalizeDueDateForDB(s)
-=======
-// normalizeDateTimeString accepts yyyy-MM-dd, yyyy-MM-dd HH:mm:ss, yyyy-MM-ddTHH:mm, ISO8601 with Z, etc., outputs yyyy-MM-dd HH:mm:ss (MySQL-compatible).
-func normalizeDateTimeString(s string) string {
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return s
-	}
-	// 去除末尾的 Z 或时区后缀，便于解析
-	s = strings.TrimSuffix(s, "Z")
-	s = strings.TrimSuffix(s, "z")
-	layouts := []string{
-		"2006-01-02 15:04:05",
-		"2006-01-02 15:04",
-		"2006-01-02T15:04:05",
-		"2006-01-02T15:04",
-		"2006-01-02",
-	}
-	for _, layout := range layouts {
-		if t, err := time.Parse(layout, s); err == nil {
-			return t.Format("2006-01-02 15:04:05")
-		}
-	}
-	return s
->>>>>>> Stashed changes
 }
 
 // parseLocalToUTC parses local time string in the given location, returns UTC as "yyyy-MM-dd HH:mm:ss".

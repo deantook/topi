@@ -8,13 +8,8 @@ import (
 	"gorm.io/gorm"
 )
 
-<<<<<<< Updated upstream
 // NormalizeDueDateForDB converts ISO8601 (e.g. 2026-03-07T00:00:00Z) to MySQL-compatible format (2006-01-02 15:04:05).
 func NormalizeDueDateForDB(s string) string {
-=======
-// normalizeDueDateForDB converts ISO8601 (e.g. 2026-03-07T00:00:00Z) to MySQL-compatible format (2006-01-02 15:04:05).
-func normalizeDueDateForDB(s string) string {
->>>>>>> Stashed changes
 	s = strings.TrimSpace(s)
 	if s == "" {
 		return s
@@ -26,19 +21,12 @@ func normalizeDueDateForDB(s string) string {
 		"2006-01-02T15:04:05",
 		"2006-01-02T15:04",
 		"2006-01-02",
-<<<<<<< Updated upstream
 		time.RFC3339,
 		time.RFC3339Nano,
 	}
 	for _, layout := range layouts {
 		if t, err := time.Parse(layout, s); err == nil {
 			return t.UTC().Format("2006-01-02 15:04:05")
-=======
-	}
-	for _, layout := range layouts {
-		if t, err := time.Parse(layout, s); err == nil {
-			return t.Format("2006-01-02 15:04:05")
->>>>>>> Stashed changes
 		}
 	}
 	return s
@@ -103,11 +91,7 @@ func (t *Task) BeforeCreate(tx *gorm.DB) error {
 		t.ID = uuid.New().String()
 	}
 	if t.DueDate != nil && *t.DueDate != "" {
-<<<<<<< Updated upstream
 		norm := NormalizeDueDateForDB(*t.DueDate)
-=======
-		norm := normalizeDueDateForDB(*t.DueDate)
->>>>>>> Stashed changes
 		t.DueDate = &norm
 	}
 	return nil
@@ -115,11 +99,7 @@ func (t *Task) BeforeCreate(tx *gorm.DB) error {
 
 func (t *Task) BeforeSave(tx *gorm.DB) error {
 	if t.DueDate != nil && *t.DueDate != "" {
-<<<<<<< Updated upstream
 		norm := NormalizeDueDateForDB(*t.DueDate)
-=======
-		norm := normalizeDueDateForDB(*t.DueDate)
->>>>>>> Stashed changes
 		t.DueDate = &norm
 	}
 	return nil
