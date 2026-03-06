@@ -399,6 +399,19 @@ export function useTasks(
     [invalidate]
   );
 
+  const clearTrash = useCallback(
+    async () => {
+      try {
+        await apiClient.delete("/tasks/trash");
+        invalidate();
+      } catch (e) {
+        console.error("Failed to clear trash:", e);
+        throw e; // 让 DeleteConfirmDialog 保持打开，便于重试
+      }
+    },
+    [invalidate]
+  );
+
   const abandonTask = useCallback(
     async (id: string) => {
       try {
@@ -446,6 +459,7 @@ export function useTasks(
     toggleTask,
     updateTask,
     deleteTask,
+    clearTrash: filter === "trash" ? clearTrash : undefined,
     abandonTask,
     restoreTask,
     reorderTasks,

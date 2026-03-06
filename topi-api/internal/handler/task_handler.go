@@ -294,6 +294,15 @@ func (h *TaskHandler) Delete(c *gin.Context) {
 	response.OK(c, gin.H{"ok": true})
 }
 
+func (h *TaskHandler) ClearTrash(c *gin.Context) {
+	userID := c.GetString(middleware.UserIDKey)
+	if err := h.svc.ClearTrash(userID); err != nil {
+		response.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	response.OK(c, gin.H{"ok": true})
+}
+
 type ReorderTaskReq struct {
 	ID       string `json:"id" binding:"required"`
 	NewIndex int    `json:"newIndex" binding:"gte=0"`
