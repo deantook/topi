@@ -28,7 +28,7 @@ web:
 	@cd topi && pnpm run dev
 
 # 重启前后端: 先停止占用端口的进程，再后台启动
-restart: stop
+up: stop
 	@echo "Starting API on :8080..."
 	@cd topi-api && nohup go run ./cmd/server > /tmp/topi-api.log 2>&1 & echo $$! > /tmp/topi-api.pid
 	@sleep 2
