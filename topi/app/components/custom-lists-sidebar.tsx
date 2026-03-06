@@ -12,6 +12,7 @@ import {
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
 import { Input } from "@/components/ui/input";
+import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { useListsFromDashboard } from "@/hooks/use-lists-from-dashboard";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +32,7 @@ function CustomListItem({
   onDelete: () => void;
 }) {
   const [editing, setEditing] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [value, setValue] = useState(name);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -77,48 +79,57 @@ function CustomListItem({
   }
 
   return (
-    <SidebarMenuItem>
-      <SidebarMenuButton
-        asChild
-        isActive={isActive}
-        tooltip={name}
-      >
-        <Link to={`/list/${id}`} className="group/item">
-          <List className="size-4 shrink-0" />
-          <span className="min-w-0 flex-1 truncate">{name}</span>
-        </Link>
-      </SidebarMenuButton>
-      {count > 0 && <SidebarMenuBadge>{count}</SidebarMenuBadge>}
-      <div
-        className={cn(
-          "absolute top-1/2 flex -translate-y-1/2 gap-0.5 opacity-0 group-hover/menu-item:opacity-100 transition-opacity [@media(hover:none)]:opacity-100",
-          count > 0 ? "right-7" : "right-1"
-        )}
-      >
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            setEditing(true);
-          }}
-          className="flex size-6 items-center justify-center rounded-md p-0 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-          aria-label="重命名"
+    <>
+      <SidebarMenuItem>
+        <SidebarMenuButton
+          asChild
+          isActive={isActive}
+          tooltip={name}
         >
-          <Pencil className="size-3.5" />
-        </button>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            if (window.confirm(`确定删除「${name}」？`)) onDelete();
-          }}
-          className="flex size-6 items-center justify-center rounded-md p-0 text-sidebar-foreground hover:bg-destructive/20 hover:text-destructive"
-          aria-label="删除"
+          <Link to={`/list/${id}`} className="group/item">
+            <List className="size-4 shrink-0" />
+            <span className="min-w-0 flex-1 truncate">{name}</span>
+          </Link>
+        </SidebarMenuButton>
+        {count > 0 && <SidebarMenuBadge>{count}</SidebarMenuBadge>}
+        <div
+          className={cn(
+            "absolute top-1/2 flex -translate-y-1/2 gap-0.5 opacity-0 group-hover/menu-item:opacity-100 transition-opacity [@media(hover:none)]:opacity-100",
+            count > 0 ? "right-7" : "right-1"
+          )}
         >
-          <Trash2 className="size-3.5" />
-        </button>
-      </div>
-    </SidebarMenuItem>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              setEditing(true);
+            }}
+            className="flex size-6 items-center justify-center rounded-md p-0 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            aria-label="重命名"
+          >
+            <Pencil className="size-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              setDeleteConfirmOpen(true);
+            }}
+            className="flex size-6 items-center justify-center rounded-md p-0 text-sidebar-foreground hover:bg-destructive/20 hover:text-destructive"
+            aria-label="删除"
+          >
+            <Trash2 className="size-3.5" />
+          </button>
+        </div>
+      </SidebarMenuItem>
+      <DeleteConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title="确定删除此清单？"
+        description={`删除「${name}」后，其中的任务将移至收集箱。`}
+        onConfirm={() => onDelete()}
+      />
+    </>
   );
 }
 
