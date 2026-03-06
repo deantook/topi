@@ -11,13 +11,16 @@ export type McpTokenGenerateResult = {
 };
 
 export async function getMcpTokenStatus(): Promise<McpTokenStatus> {
-  return apiClient.get<McpTokenStatus>("/mcp-token");
+  const res = (await apiClient.get("/mcp-token")) as { data: McpTokenStatus };
+  return res.data ?? { hasToken: false };
 }
 
 export async function generateMcpToken(): Promise<McpTokenGenerateResult> {
-  return apiClient.post<McpTokenGenerateResult>("/mcp-token");
+  const res = (await apiClient.post("/mcp-token")) as { data: McpTokenGenerateResult };
+  if (!res.data?.token) throw new Error("Invalid response");
+  return res.data;
 }
 
 export async function revokeMcpToken(): Promise<void> {
-  return apiClient.delete("/mcp-token");
+  await apiClient.delete("/mcp-token");
 }

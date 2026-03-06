@@ -18,7 +18,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { TaskList } from "@/components/task-list";
 import {
   generateMcpToken,
   getMcpTokenStatus,
@@ -147,8 +146,6 @@ export default function Settings() {
           )}
         </CardContent>
       </Card>
-
-      <TaskList title="待办" filter="all" />
 
       <AlertDialog open={revokeOpen} onOpenChange={setRevokeOpen}>
         <AlertDialogContent>
