@@ -44,7 +44,7 @@ func InitializeServer() (*Server, error) {
 	taskRepository := repository.NewTaskRepository(db)
 	taskService := service.NewTaskService(taskRepository)
 	listRepository := repository.NewListRepository(db)
-	listService := service.NewListService(listRepository)
+	listService := service.NewListService(listRepository, taskRepository)
 	dashboardHandler := handler.NewDashboardHandler(taskService, listService)
 	listHandler := handler.NewListHandler(listService)
 	taskHandler := handler.NewTaskHandler(taskService)
