@@ -48,10 +48,12 @@ func InitializeServer() (*Server, error) {
 	dashboardHandler := handler.NewDashboardHandler(taskService, listService)
 	listHandler := handler.NewListHandler(listService)
 	taskHandler := handler.NewTaskHandler(taskService)
+	mcpTokenService := service.NewMcpTokenService(userRepository)
+	mcpTokenHandler := handler.NewMcpTokenHandler(mcpTokenService)
 	taskHandlers := handlers.NewTaskHandlers(taskService)
 	listHandlers := handlers.NewListHandlers(listService)
 	mcpServer := mcpsetup.NewMCPServer(configConfig, taskHandlers, listHandlers, helper)
-	engine := provideRouter(configConfig, authHandler, dashboardHandler, listHandler, taskHandler, mcpServer, helper)
+	engine := provideRouter(configConfig, authHandler, dashboardHandler, listHandler, taskHandler, mcpTokenHandler, mcpServer, helper)
 	server := &Server{
 		Engine: engine,
 		Config: configConfig,
@@ -85,6 +87,7 @@ func provideRouter(
 	dashboardH *handler.DashboardHandler,
 	listH *handler.ListHandler,
 	taskH *handler.TaskHandler,
+	mcpTokenH *handler.McpTokenHandler,
 	mcpServer *mcpsetup.MCPServer,
 	jwtHelper *jwt.Helper,
 ) *gin.Engine {
@@ -119,6 +122,10 @@ func provideRouter(
 			auth.POST("/lists", listH.Create)
 			auth.PATCH("/lists/:id", listH.Update)
 			auth.DELETE("/lists/:id", listH.Delete)
+
+			auth.GET("/mcp-token", mcpTokenH.GetStatus)
+			auth.POST("/mcp-token", mcpTokenH.Generate)
+			auth.DELETE("/mcp-token", mcpTokenH.Revoke)
 		}
 	}
 

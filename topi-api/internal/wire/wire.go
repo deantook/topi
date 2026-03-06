@@ -39,7 +39,9 @@ func InitializeServer() (*Server, error) {
 		service.NewAuthService,
 		service.NewListService,
 		service.NewTaskService,
+		service.NewMcpTokenService,
 		handler.NewAuthHandler,
+		handler.NewMcpTokenHandler,
 		handler.NewDashboardHandler,
 		handler.NewListHandler,
 		handler.NewTaskHandler,
@@ -69,6 +71,7 @@ func provideRouter(
 	dashboardH *handler.DashboardHandler,
 	listH *handler.ListHandler,
 	taskH *handler.TaskHandler,
+	mcpTokenH *handler.McpTokenHandler,
 	mcpServer *mcpsetup.MCPServer,
 	jwtHelper *jwt.Helper,
 ) *gin.Engine {
@@ -103,6 +106,10 @@ func provideRouter(
 			auth.POST("/lists", listH.Create)
 			auth.PATCH("/lists/:id", listH.Update)
 			auth.DELETE("/lists/:id", listH.Delete)
+
+			auth.GET("/mcp-token", mcpTokenH.GetStatus)
+			auth.POST("/mcp-token", mcpTokenH.Generate)
+			auth.DELETE("/mcp-token", mcpTokenH.Revoke)
 		}
 	}
 
