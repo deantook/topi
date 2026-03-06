@@ -26,6 +26,8 @@ import {
   Bot,
   ChevronDown,
   ChevronRight,
+  Inbox,
+  List,
 } from "lucide-react";
 import { AddTaskInput } from "./add-task-input";
 import { DateTimePickerPopover } from "./datetime-picker";
@@ -39,6 +41,12 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { Task, TaskFilter, TaskPriority } from "@/hooks/use-tasks";
 import { useTasks } from "@/hooks/use-tasks";
 import { useListsFromDashboard } from "@/hooks/use-lists-from-dashboard";
@@ -51,6 +59,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
+import { toast } from "sonner";
 
 const WEEKDAY_NAMES = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
 
@@ -376,6 +385,11 @@ export function TaskList({
     deleteTask,
     abandonTask,
     restoreTask,
+    batchTrash,
+    batchAbandon,
+    batchToggle,
+    batchRestore,
+    batchMove,
     reorderTasks,
     isLoading,
     clearTrash,
@@ -408,7 +422,7 @@ export function TaskList({
     },
     [tasks, reorderTasks]
   );
-  const { getList } = useListsFromDashboard();
+  const { getList, lists } = useListsFromDashboard();
 
   const showListName =
     filter === "all" ||
@@ -423,6 +437,10 @@ export function TaskList({
   const [deleteConfirmTaskId, setDeleteConfirmTaskId] = useState<string | null>(null);
   const [clearTrashConfirmOpen, setClearTrashConfirmOpen] = useState(false);
   const [isClearingTrash, setIsClearingTrash] = useState(false);
+  const [isBatchMode, setIsBatchMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [batchConfirmType, setBatchConfirmType] = useState<"trash" | "abandon" | null>(null);
+  const [isBatchOperating, setIsBatchOperating] = useState(false);
 
   const handleToggle = useCallback(
     (task: Task, itemMode?: "default" | "completed" | "abandoned" | "trash") => {
@@ -610,14 +628,24 @@ export function TaskList({
         )}
         onMouseEnter={() => setHoverId(task.id)}
         onMouseLeave={() => setHoverId(null)}
-        onClick={() => handleRowClick(task.id)}
-        onDoubleClick={() => handleRowDoubleClick(task)}
+        onClick={() => !isBatchMode && handleRowClick(task.id)}
+        onDoubleClick={() => !isBatchMode && handleRowDoubleClick(task)}
       >
-        {effectiveMode === "default" && (
+        {isBatchMode ? (
+          <Checkbox
+            checked={selectedIds.has(task.id)}
+            onCheckedChange={() => toggleSelect(task.id)}
+            aria-label={`选择 ${task.title}`}
+            onClick={(e) => e.stopPropagation()}
+            className="shrink-0"
+          />
+        ) : effectiveMode === "default" ? (
           <GripVertical
             className="size-4 shrink-0 cursor-grab text-muted-foreground/60 opacity-0 transition-opacity group-hover:opacity-100"
             aria-hidden
           />
+        ) : (
+          <span className="size-4 shrink-0" aria-hidden />
         )}
         <Checkbox
           checked={task.completed || effectiveMode !== "default"}
@@ -715,6 +743,22 @@ export function TaskList({
     );
   };
 
+  const toggleBatchMode = useCallback(() => {
+    setIsBatchMode((v) => {
+      if (v) setSelectedIds(new Set());
+      return !v;
+    });
+  }, []);
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
   const setOwnerFilter = useCallback(
     (value: string | null) => {
       setSearchParams((prev) => {
@@ -759,6 +803,136 @@ export function TaskList({
           )}
         </div>
         <div className="flex items-center gap-2">
+          {mode !== "trash" && (
+            <Button
+              variant={isBatchMode ? "default" : "outline"}
+              size="sm"
+              onClick={toggleBatchMode}
+              aria-pressed={isBatchMode}
+            >
+              批量操作
+            </Button>
+          )}
+          {isBatchMode && selectedIds.size > 0 && (
+            <>
+              {(mode === "default" || mode === "abandoned") && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isBatchOperating}
+                  onClick={async () => {
+                    if (!batchToggle) return;
+                    const ids = Array.from(selectedIds);
+                    const n = ids.length;
+                    setIsBatchOperating(true);
+                    try {
+                      await batchToggle(ids);
+                      setSelectedIds(new Set());
+                      toast.success(`已完成 ${n} 个任务`);
+                    } catch {
+                      toast.error("操作失败，请重试");
+                    } finally {
+                      setIsBatchOperating(false);
+                    }
+                  }}
+                >
+                  完成
+                </Button>
+              )}
+              {mode === "abandoned" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isBatchOperating}
+                  onClick={async () => {
+                    if (!batchRestore) return;
+                    const ids = Array.from(selectedIds);
+                    const n = ids.length;
+                    setIsBatchOperating(true);
+                    try {
+                      await batchRestore(ids);
+                      setSelectedIds(new Set());
+                      toast.success(`已恢复 ${n} 个任务`);
+                    } catch {
+                      toast.error("操作失败，请重试");
+                    } finally {
+                      setIsBatchOperating(false);
+                    }
+                  }}
+                >
+                  恢复
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isBatchOperating}
+                onClick={() => setBatchConfirmType("abandon")}
+              >
+                放弃
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isBatchOperating}
+                onClick={() => setBatchConfirmType("trash")}
+              >
+                删除
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" disabled={isBatchOperating}>
+                    <List className="size-4" />
+                    移入清单
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuItem
+                    onClick={async () => {
+                      if (!batchMove) return;
+                      const ids = Array.from(selectedIds);
+                      const n = ids.length;
+                      setIsBatchOperating(true);
+                      try {
+                        await batchMove(ids, null);
+                        setSelectedIds(new Set());
+                        toast.success(`已移入收集箱 ${n} 个任务`);
+                      } catch {
+                        toast.error("操作失败，请重试");
+                      } finally {
+                        setIsBatchOperating(false);
+                      }
+                    }}
+                  >
+                    <Inbox className="size-4" />
+                    收集箱
+                  </DropdownMenuItem>
+                  {lists?.map((list) => (
+                    <DropdownMenuItem
+                      key={list.id}
+                      onClick={async () => {
+                        if (!batchMove) return;
+                        const ids = Array.from(selectedIds);
+                        const n = ids.length;
+                        setIsBatchOperating(true);
+                        try {
+                          await batchMove(ids, list.id);
+                          setSelectedIds(new Set());
+                          toast.success(`已移入「${list.name}」${n} 个任务`);
+                        } catch {
+                          toast.error("操作失败，请重试");
+                        } finally {
+                          setIsBatchOperating(false);
+                        }
+                      }}
+                    >
+                      {list.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          )}
           {mode === "trash" && clearTrash && (
             <Button
               variant="outline"
@@ -798,7 +972,7 @@ export function TaskList({
               ? "暂无任务，添加一个吧"
               : "这里还没有内容"}
           </p>
-        ) : mode === "default" && tasks.length > 0 ? (
+        ) : mode === "default" && tasks.length > 0 && !isBatchMode ? (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
               {tasks.map((task, index) => (
@@ -902,6 +1076,38 @@ export function TaskList({
         onConfirm={() => {
           if (deleteConfirmTaskId) {
             handleDelete(deleteConfirmTaskId);
+          }
+        }}
+      />
+      <DeleteConfirmDialog
+        open={batchConfirmType !== null}
+        onOpenChange={(open) => !open && setBatchConfirmType(null)}
+        title={batchConfirmType === "trash" ? `将 ${selectedIds.size} 个任务移至垃圾桶？` : `放弃 ${selectedIds.size} 个任务？`}
+        description={
+          batchConfirmType === "trash"
+            ? "移至垃圾桶后可恢复。"
+            : "放弃后任务将进入已放弃列表。"
+        }
+        confirmLabel={batchConfirmType === "trash" ? "删除" : "放弃"}
+        onConfirm={async () => {
+          if (batchConfirmType === null) return;
+          const ids = Array.from(selectedIds);
+          const n = ids.length;
+          setIsBatchOperating(true);
+          try {
+            if (batchConfirmType === "trash") {
+              await batchTrash?.(ids);
+              toast.success(`已删除 ${n} 个任务`);
+            } else {
+              await batchAbandon?.(ids);
+              toast.success(`已放弃 ${n} 个任务`);
+            }
+            setSelectedIds(new Set());
+            setBatchConfirmType(null);
+          } catch {
+            toast.error("操作失败，请重试");
+          } finally {
+            setIsBatchOperating(false);
           }
         }}
       />
