@@ -184,10 +184,23 @@ function filterTasks(tasks: Task[], filter: TaskFilter, refDate: Date): Task[] {
       }
   }
 
-  return [...filtered].sort(
-    (a, b) =>
+  const isActiveView =
+    filter === "all" ||
+    filter === "today" ||
+    filter === "tomorrow" ||
+    filter === "recent-seven" ||
+    filter === "inbox" ||
+    (typeof filter === "object" && "listId" in filter);
+
+  return [...filtered].sort((a, b) => {
+    // 各清单视图中，已完成的任务显示在下方
+    if (isActiveView && a.completed !== b.completed) {
+      return a.completed ? 1 : -1;
+    }
+    return (
       PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority] || a.order - b.order
-  );
+    );
+  });
 }
 
 export function useTasks(filter: TaskFilter, options?: { owner?: string }) {

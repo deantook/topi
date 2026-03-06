@@ -11,9 +11,34 @@ import (
 	"gorm.io/gorm"
 )
 
+<<<<<<< Updated upstream
 // normalizeDateTimeString accepts yyyy-MM-dd, yyyy-MM-dd HH:mm:ss, ISO8601, etc., outputs yyyy-MM-dd HH:mm:ss.
 func normalizeDateTimeString(s string) string {
 	return model.NormalizeDueDateForDB(s)
+=======
+// normalizeDateTimeString accepts yyyy-MM-dd, yyyy-MM-dd HH:mm:ss, yyyy-MM-ddTHH:mm, ISO8601 with Z, etc., outputs yyyy-MM-dd HH:mm:ss (MySQL-compatible).
+func normalizeDateTimeString(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return s
+	}
+	// 去除末尾的 Z 或时区后缀，便于解析
+	s = strings.TrimSuffix(s, "Z")
+	s = strings.TrimSuffix(s, "z")
+	layouts := []string{
+		"2006-01-02 15:04:05",
+		"2006-01-02 15:04",
+		"2006-01-02T15:04:05",
+		"2006-01-02T15:04",
+		"2006-01-02",
+	}
+	for _, layout := range layouts {
+		if t, err := time.Parse(layout, s); err == nil {
+			return t.Format("2006-01-02 15:04:05")
+		}
+	}
+	return s
+>>>>>>> Stashed changes
 }
 
 // parseLocalToUTC parses local time string in the given location, returns UTC as "yyyy-MM-dd HH:mm:ss".
@@ -419,52 +444,54 @@ func (s *TaskService) Toggle(userID, id string) error {
 		}
 		return err
 	}
-	t.Completed = !t.Completed
-	if t.Completed {
-		t.Status = model.TaskStatusCompleted
-	} else {
-		t.Status = model.TaskStatusActive
+	completed := !t.Completed
+	status := model.TaskStatusActive
+	if completed {
+		status = model.TaskStatusCompleted
 	}
-	return s.repo.Update(t)
+	return s.repo.UpdateFields(id, userID, map[string]interface{}{
+		"completed": completed,
+		"status":   status,
+	})
 }
 
 func (s *TaskService) Abandon(userID, id string) error {
-	t, err := s.repo.GetByIDAndUserID(id, userID)
-	if err != nil {
+	if _, err := s.repo.GetByIDAndUserID(id, userID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return ErrTaskNotFound
 		}
 		return err
 	}
-	t.Status = model.TaskStatusAbandoned
-	t.Completed = false
-	return s.repo.Update(t)
+	return s.repo.UpdateFields(id, userID, map[string]interface{}{
+		"status":    model.TaskStatusAbandoned,
+		"completed": false,
+	})
 }
 
 func (s *TaskService) Restore(userID, id string) error {
-	t, err := s.repo.GetByIDAndUserID(id, userID)
-	if err != nil {
+	if _, err := s.repo.GetByIDAndUserID(id, userID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return ErrTaskNotFound
 		}
 		return err
 	}
-	t.Status = model.TaskStatusActive
-	t.Completed = false
-	return s.repo.Update(t)
+	return s.repo.UpdateFields(id, userID, map[string]interface{}{
+		"status":    model.TaskStatusActive,
+		"completed": false,
+	})
 }
 
 func (s *TaskService) MoveToTrash(userID, id string) error {
-	t, err := s.repo.GetByIDAndUserID(id, userID)
-	if err != nil {
+	if _, err := s.repo.GetByIDAndUserID(id, userID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return ErrTaskNotFound
 		}
 		return err
 	}
-	t.Status = model.TaskStatusTrash
-	t.Completed = false
-	return s.repo.Update(t)
+	return s.repo.UpdateFields(id, userID, map[string]interface{}{
+		"status":    model.TaskStatusTrash,
+		"completed": false,
+	})
 }
 
 func (s *TaskService) Delete(userID, id string) error {
@@ -498,8 +525,7 @@ func (s *TaskService) Reorder(userID, id string, newIndex int) error {
 	tasks = append(tasks[:idx], tasks[idx+1:]...)
 	tasks = append(tasks[:newIndex], append([]model.Task{item}, tasks[newIndex:]...)...)
 	for i, t := range tasks {
-		t.Order = i
-		if err := s.repo.Update(&t); err != nil {
+		if err := s.repo.UpdateFields(t.ID, userID, map[string]interface{}{"sort_order": i}); err != nil {
 			return err
 		}
 	}
